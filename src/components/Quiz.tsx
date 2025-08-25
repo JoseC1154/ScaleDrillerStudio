@@ -1,25 +1,25 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
-import { DrillSettings, Note, Question, Scale, MusicKey, UserData, PerformanceUpdate, DrillMode, FretboardNote, DrillCompletionResult, SweeperPhase, NoteDiscoveryRound, ScaleType, QuizPhase, DegreeDashPhase, Key } from '../types.ts';
-import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale } from '../services/music.ts';
-import { useMidi } from '../hooks/useMidi.ts';
-import { useAudioPitch } from '../hooks/useAudioPitch.ts';
-import Piano from './Piano.tsx';
-import Fretboard from './Fretboard.tsx';
-import HelpModal from './HelpModal.tsx';
-import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, SCALE_TYPES, KEY_THEMES } from '../constants.ts';
-import PreQuizInfo from './PreQuizInfo.tsx';
-import Countdown from './Countdown.tsx';
-import { playNoteSound } from '../services/sound.ts';
-import { HelpIcon, ToggleDegreesIcon, QuitIcon, HeartIcon } from './Icons.tsx';
-import { useScrollToElement } from '../hooks/useScrollToElement.ts';
-import GalaxyConstructor from './GalaxyConstructor.tsx';
-import { playVibration, VIBRATION_PATTERNS } from '../services/haptics.ts';
-import { useSustainedNote } from '../hooks/useSustainedNote.ts';
-import WarpSpeedBackground from './WarpSpeedBackground.tsx';
-import DegreeSelector from './DegreeSelector.tsx';
-import DegreeDash from './DegreeDash.tsx';
-import DegreeSelectorModal from './DegreeSelectorModal.tsx';
+import { DrillSettings, Note, Question, Scale, MusicKey, UserData, PerformanceUpdate, DrillMode, FretboardNote, DrillCompletionResult, SweeperPhase, NoteDiscoveryRound, ScaleType, QuizPhase, DegreeDashPhase, Key } from '../types';
+import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale } from '../services/music';
+import { useMidi } from '../hooks/useMidi';
+import { useAudioPitch } from '../hooks/useAudioPitch';
+import Piano from './Piano';
+import Fretboard from './Fretboard';
+import HelpModal from './HelpModal';
+import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, SCALE_TYPES, KEY_THEMES } from '../constants';
+import PreQuizInfo from './PreQuizInfo';
+import Countdown from './Countdown';
+import { playNoteSound } from '../services/sound';
+import { HelpIcon, ToggleDegreesIcon, QuitIcon, HeartIcon } from './Icons';
+import { useScrollToElement } from '../hooks/useScrollToElement';
+import GalaxyConstructor from './GalaxyConstructor';
+import { playVibration, VIBRATION_PATTERNS } from '../services/haptics';
+import { useSustainedNote } from '../hooks/useSustainedNote';
+import WarpSpeedBackground from './WarpSpeedBackground';
+import DegreeSelector from './DegreeSelector';
+import DegreeDash from './DegreeDash';
+import DegreeSelectorModal from './DegreeSelectorModal';
 
 
 interface QuizProps {
@@ -603,7 +603,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         let generatedQuestions;
         if (isDegreeDashMode || isDegreeDashProMode) {
             // Always start Degree Dash modes in C
-            generatedQuestions = generateDrillQuestions({ ...settings, key: 'C', questionCount: 1 });
+            generatedQuestions = generateDrillQuestions({ ...settings, key: 'C', questionCount: 1 }, userData.performance);
         } else {
             generatedQuestions = generateDrillQuestions(settings, userData.performance);
         }
