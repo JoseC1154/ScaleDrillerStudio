@@ -1,11 +1,12 @@
 
 
+
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Note, Handedness, Scale, DrillMode, QuizPhase } from '../types';
-import { getFretboardNotes } from '../services/music';
-import { GUITAR_TUNING, BASS_TUNING } from '../constants';
-import Fret from './Fret';
-import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
+import { Note, Handedness, Scale, DrillMode, QuizPhase } from '../types.ts';
+import { getFretboardNotes } from '../services/music.ts';
+import { GUITAR_TUNING, BASS_TUNING } from '../constants.ts';
+import Fret from './Fret.tsx';
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons.tsx';
 
 interface FretboardProps {
   instrument: 'Guitar' | 'Bass';

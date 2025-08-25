@@ -11,7 +11,6 @@
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjZjk3MzE2Ij48cGF0aCBkPSJNMTIgM3YxMC41NWMtLjU5LS4zNC0xLjI3LS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==" />
     
     <!-- PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Scale Driller" />
@@ -282,9 +281,10 @@
   }
 }
 </script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
   <body>
     <div id="root" class="h-full w-full"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="text/babel" data-type="module" src="./index.tsx"></script>
   </body>
 </html>

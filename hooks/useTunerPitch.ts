@@ -1,7 +1,9 @@
 
+
+
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { TuningNote } from '../types';
-import { getClosestNote } from '../services/music';
+import { TuningNote } from '../types.ts';
+import { getClosestNote } from '../services/music.ts';
 
 export type AudioPitchStatus = 'idle' | 'permission_requested' | 'running' | 'suspended' | 'denied' | 'error' | 'unavailable';
 

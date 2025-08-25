@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { SCALE_TYPES, MUSIC_KEYS, DEGREE_NAMES, LEVEL_MODES, CHORD_TYPES } from '../constants';
-import { DrillSettings, DrillMode, UserData, Note } from '../types';
-import PracticeKeySelector from './PracticeKeySelector';
-import { LockIcon } from './Icons';
-import DevSettingsCard from './DevSettingsCard';
+import { SCALE_TYPES, MUSIC_KEYS, DEGREE_NAMES, LEVEL_MODES, CHORD_TYPES } from '../constants.ts';
+import { DrillSettings, DrillMode, UserData, Note } from '../types.ts';
+import PracticeKeySelector from './PracticeKeySelector.tsx';
+import { LockIcon } from './Icons.tsx';
+import DevSettingsCard from './DevSettingsCard.tsx';
 
 interface SettingsProps {
   settings: DrillSettings;

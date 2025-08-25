@@ -1,12 +1,13 @@
 
 
+
 import React, { useState, useCallback, useEffect } from 'react';
-import { DrillSettings, Note } from '../types';
-import { useMidi } from '../hooks/useMidi';
-import { useAudioPitch } from '../hooks/useAudioPitch';
-import Piano from './Piano';
-import Fretboard from './Fretboard';
-import { playNoteSound } from '../services/sound';
+import { DrillSettings, Note } from '../types.ts';
+import { useMidi } from '../hooks/useMidi.ts';
+import { useAudioPitch } from '../hooks/useAudioPitch.ts';
+import Piano from './Piano.tsx';
+import Fretboard from './Fretboard.tsx';
+import { playNoteSound } from '../services/sound.ts';
 
 interface InputTesterProps {
   settings: DrillSettings;

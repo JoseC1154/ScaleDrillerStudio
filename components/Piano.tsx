@@ -1,10 +1,11 @@
 
 
+
 import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
-import { Note, Scale, DrillMode, QuizPhase } from '../types';
-import { ALL_NOTES } from '../constants';
-import PianoKey from './PianoKey';
-import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
+import { Note, Scale, DrillMode, QuizPhase } from '../types.ts';
+import { ALL_NOTES } from '../constants.ts';
+import PianoKey from './PianoKey.tsx';
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons.tsx';
 
 interface PianoProps {
   onNotePlayed: (note: string, event?: React.MouseEvent) => void;

@@ -1,26 +1,25 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
-import { DrillSettings, Note, Question, Scale, MusicKey, UserData, PerformanceUpdate, DrillMode, FretboardNote, DrillCompletionResult, SweeperPhase, NoteDiscoveryRound, ScaleType, QuizPhase, DegreeDashPhase, Key } from '../types';
-import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale } from '../services/music';
-import { useMidi } from '../hooks/useMidi';
-import { useAudioPitch } from '../hooks/useAudioPitch';
-import Piano from './Piano';
-import Fretboard from './Fretboard';
-import HelpModal from './HelpModal';
-import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, SCALE_TYPES, KEY_THEMES } from '../constants';
-import PreQuizInfo from './PreQuizInfo';
-import Countdown from './Countdown';
-import { playNoteSound } from '../services/sound';
-import { HelpIcon, ToggleDegreesIcon, QuitIcon, HeartIcon } from './Icons';
-import { useScrollToElement } from '../hooks/useScrollToElement';
-import GalaxyConstructor from './GalaxyConstructor';
-import { playVibration, VIBRATION_PATTERNS } from '../services/haptics';
-import { useSustainedNote } from '../hooks/useSustainedNote';
-import WarpSpeedBackground from './WarpSpeedBackground';
-import DegreeSelector from './DegreeSelector';
-import DegreeDash from './DegreeDash';
-import DegreeSelectorModal from './DegreeSelectorModal';
+import { DrillSettings, Note, Question, Scale, MusicKey, UserData, PerformanceUpdate, DrillMode, FretboardNote, DrillCompletionResult, SweeperPhase, NoteDiscoveryRound, ScaleType, QuizPhase, DegreeDashPhase, Key } from '../types.ts';
+import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale } from '../services/music.ts';
+import { useMidi } from '../hooks/useMidi.ts';
+import { useAudioPitch } from '../hooks/useAudioPitch.ts';
+import Piano from './Piano.tsx';
+import Fretboard from './Fretboard.tsx';
+import HelpModal from './HelpModal.tsx';
+import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, SCALE_TYPES, KEY_THEMES } from '../constants.ts';
+import PreQuizInfo from './PreQuizInfo.tsx';
+import Countdown from './Countdown.tsx';
+import { playNoteSound } from '../services/sound.ts';
+import { HelpIcon, ToggleDegreesIcon, QuitIcon, HeartIcon } from './Icons.tsx';
+import { useScrollToElement } from '../hooks/useScrollToElement.ts';
+import GalaxyConstructor from './GalaxyConstructor.tsx';
+import { playVibration, VIBRATION_PATTERNS } from '../services/haptics.ts';
+import { useSustainedNote } from '../hooks/useSustainedNote.ts';
+import WarpSpeedBackground from './WarpSpeedBackground.tsx';
+import DegreeSelector from './DegreeSelector.tsx';
+import DegreeDash from './DegreeDash.tsx';
+import DegreeSelectorModal from './DegreeSelectorModal.tsx';
 
 
 interface QuizProps {
@@ -1127,7 +1126,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
             setScoreChange({ value: -settings.beatPenalty, id: Date.now() });
         }
     }, [currentQuestion, scale, sweeperFoundNotes, sweeperMines, onUpdatePerformance, settings, playCorrectSound, playIncorrectSound, finalOctaveNoteId, goToNextSweeperKey, stopNote]);
-
+    
     const handleNoteProfessorAnswer = useCallback((playedUniqueNote: string, playedNoteName: Note) => {
       if (!currentQuestion) return;
   
@@ -1190,800 +1189,231 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
 
             if(discoveryRound === 1) setReinforcementMessage("Nice work!");
             else if (discoveryRound === 2 && newStreak > 0 && newStreak % 5 === 0) setReinforcementMessage("Power Note!");
-            else if (discoveryRound === 4 && newStreak > 0 && newStreak % 4 === 0) setReinforcementMessage("Combo Saver!");
-            else setReinforcementMessage(null);
             
-            goToNextQuestion();
-        } else {
+            setTimeout(() => {
+                goToNextQuestion();
+                setReinforcementMessage(null);
+            }, 800);
+
+        } else { // Incorrect choice
             playIncorrectSound();
-            setHadMistakeThisQuestion(true);
             setIncorrectChoice(choice);
             setTimeout(() => setIncorrectChoice(null), 500);
-            setTotalIncorrectInDrill(i => i + 1);
+
+            const config = NOTE_DISCOVERY_ROUNDS_CONFIG[discoveryRound as NoteDiscoveryRound];
+            if (config) {
+                if (config.penalty > 0) {
+                    const newBeats = beats - config.penalty;
+                    setBeats(Math.max(0, newBeats));
+                    setScoreChange({ value: -config.penalty, id: Date.now() });
+                    if (newBeats <= 0) {
+                        handleNoteDiscoveryFailure("Out of beats!");
+                        return;
+                    }
+                }
+            }
+
+            setTotalIncorrectInDrill(c => c + 1);
             setMaxStreak(s => Math.max(s, streak));
             setStreak(0);
-
             const newErrors = consecutiveErrors + 1;
             setConsecutiveErrors(newErrors);
 
-            if(discoveryRound === 2) setReinforcementMessage("Tip: Try humming the note!");
-            else if (discoveryRound === 3 && newErrors >= 2) {
-                setReinforcementMessage("Tip: Focus on note groups!");
-                setConsecutiveErrors(0); // Reset after showing tip
-            } else setReinforcementMessage(null);
-
-
-            const config = NOTE_DISCOVERY_ROUNDS_CONFIG[discoveryRound as NoteDiscoveryRound];
-            if (config.penalty > 0) {
-                const revealedArray: Note[] = Array.from(revealedNoteNames);
-                const sacrificed: Note[] = [];
-                for (let i = 0; i < config.penalty && revealedArray.length > 0; i++) {
-                    const randomIndex = Math.floor(Math.random() * revealedArray.length);
-                    const noteToRemove = revealedArray.splice(randomIndex, 1)[0];
-                    if (noteToRemove) sacrificed.push(noteToRemove);
-                }
-                
-                if (sacrificed.length > 0) {
-                    const newRevealedNotes = new Set(revealedNoteNames);
-                    sacrificed.forEach(n => newRevealedNotes.delete(n));
-                    const willLose = newRevealedNotes.size === 0 && discoveryRound > 1;
-
-                    playVibration(VIBRATION_PATTERNS.SACRIFICE);
-                    setAnimatingSacrifice(new Set(sacrificed));
-                    
-                    setTimeout(() => {
-                        setRevealedNoteNames(newRevealedNotes);
-                        setAnimatingSacrifice(new Set());
-                        if (willLose) {
-                            handleNoteDiscoveryFailure("All revealed notes lost!");
-                        }
-                    }, 600); // Animation duration
-                }
+            if (newErrors >= 2 && discoveryRound === 1) {
+                setReinforcementMessage("Hint: The note you're looking for is highlighted on the instrument.");
             }
         }
-    }, [currentQuestion, onUpdatePerformance, playCorrectSound, playIncorrectSound, goToNextQuestion, discoveryRound, revealedNoteNames, handleFinish, questionStartTime, streak, consecutiveErrors, handleNoteDiscoveryFailure]);
+    }, [currentQuestion, questionStartTime, onUpdatePerformance, playCorrectSound, discoveryRound, goToNextQuestion, playIncorrectSound, streak, consecutiveErrors, beats, handleNoteDiscoveryFailure]);
 
-    const handleAnswer = useCallback((playedUniqueNote: string, event?: React.MouseEvent) => {
-        if ((gameState !== 'playing' && sweeperPhaseRef.current !== 'intermission') || quizPhase !== 'active' || !currentQuestion) return;
+
+    const handleNotePlayed = useCallback((playedUniqueNote: string, event?: React.MouseEvent) => {
+        if (gameState !== 'playing' || !currentQuestion || quizPhase !== 'active') return;
+        
+        // Prevent accidental double-taps on touch
+        if (event && event.type === 'click' && event.detail > 1) return;
+
+        if (settings.inputMethod === 'Touch') {
+            playNote(playedUniqueNote);
+            setTimeout(() => stopNote(), 300);
+        } else {
+            playNote(playedUniqueNote); // For MIDI/Mic sustain
+        }
         
         const playedNoteName = playedUniqueNote.replace(/-?\d.*$/, '') as Note;
 
-        if (isDegreeDashMode || isDegreeDashProMode) return;
-        
-        playNote(playedUniqueNote);
-
-        if (isNoteDiscoveryMode) {
-            stopNote();
-            return;
+        switch (settings.drillMode) {
+            case 'Key Conjurer':
+                // Note discovery uses the choice buttons, not direct instrument interaction.
+                return;
+            case 'Note Professor':
+                handleNoteProfessorAnswer(playedUniqueNote, playedNoteName);
+                break;
+            case 'Galaxy Constructor':
+                // Galaxy constructor uses interval buttons.
+                return;
+            case 'Simon Memory Game':
+                handleSimonGameAnswer(playedUniqueNote, playedNoteName);
+                break;
+            case 'Scale Detective':
+                handleScaleDetectiveAnswer(playedUniqueNote, playedNoteName);
+                break;
+            case 'ScaleSweeper':
+                handleScaleSweeperAnswer(playedUniqueNote, playedNoteName);
+                break;
+            case 'Key Notes':
+            case 'Chord Builder':
+                handleMultiNoteAnswer(playedUniqueNote, playedNoteName);
+                break;
+            case 'Degree Dash':
+                // Handled by DegreeDash component
+                break;
+            case 'Practice':
+            case 'Time Attack':
+            case 'BPM Challenge':
+            case 'Nashville Numbers':
+            case 'Degree Training':
+            case 'Intervals':
+            case 'Randomizer Roulette':
+            case 'BPM Roulette':
+            default:
+                handleStandardAnswer(playedUniqueNote, playedNoteName);
+                break;
         }
-        else if (isNoteProfessorMode) handleNoteProfessorAnswer(playedUniqueNote, playedNoteName);
-        else if (isGalaxyConstructorMode) return; // Input is from interval buttons
-        else if (isScaleSweeperMode) handleScaleSweeperAnswer(playedUniqueNote, playedNoteName);
-        else if (isSimonGameMode) handleSimonGameAnswer(playedUniqueNote, playedNoteName);
-        else if (settings.drillMode === 'Scale Detective') handleScaleDetectiveAnswer(playedUniqueNote, playedNoteName);
-        else if (isMultiNoteQuestion) handleMultiNoteAnswer(playedUniqueNote, playedNoteName);
-        else handleStandardAnswer(playedUniqueNote, playedNoteName);
-    }, [gameState, quizPhase, currentQuestion, isNoteProfessorMode, isGalaxyConstructorMode, isScaleSweeperMode, isSimonGameMode, isMultiNoteQuestion, settings.drillMode, handleNoteProfessorAnswer, handleScaleSweeperAnswer, handleSimonGameAnswer, handleScaleDetectiveAnswer, handleMultiNoteAnswer, handleStandardAnswer, isNoteDiscoveryMode, isDegreeDashMode, isDegreeDashProMode, playNote, stopNote]);
+    }, [
+        gameState, currentQuestion, quizPhase, settings.inputMethod, settings.drillMode, playNote, stopNote,
+        handleNoteProfessorAnswer, handleSimonGameAnswer, handleScaleDetectiveAnswer, handleScaleSweeperAnswer,
+        handleMultiNoteAnswer, handleStandardAnswer
+    ]);
 
-  const handleAnswerWithSound = useCallback((playedUniqueNote: string, event?: React.MouseEvent) => {
-    if (settings.inputMethod === 'Touch') {
-        playNoteSound(playedUniqueNote, settings.instrument);
+    useMidi(settings.inputMethod === 'MIDI', handleNotePlayed);
+    const { status: micStatus, resume: resumeMic } = useAudioPitch(
+        settings.inputMethod === 'Mic',
+        handleNotePlayed,
+        settings.audioInputDeviceId,
+        settings.micSensitivity,
+        settings.micGain,
+        settings.micCompressionThreshold,
+        settings.micCompressionRatio
+    );
+
+    const instrumentKeyRefs = useRef<Record<string, HTMLElement | null>>({});
+    const keyRefCallback = useCallback((refs: Record<string, HTMLElement | null>) => {
+        instrumentKeyRefs.current = refs;
+    }, []);
+
+    const instrumentComponent = useMemo(() => {
+        const props = {
+            onNotePlayed: handleNotePlayed,
+            highlightedNotes: isMultiNoteQuestion ? getUniqueAnswersForQuestion(activeQuestion!) : (isNoteDiscoveryMode ? [highlightedUniqueId || ''] : []),
+            correctNotes: foundNotes,
+            incorrectNotes: incorrectNotesFeedback,
+            labelMode: instrumentLabelMode,
+            scale,
+            noteLabels: isScaleSweeperMode ? sweeperNoteLabels : undefined,
+            activeNotes: isScaleSweeperMode ? [...sweeperFoundNotes, ...sweeperMines] : undefined,
+            mineNotes: isScaleSweeperMode ? sweeperMines : undefined,
+            revealedNoteNames: isNoteDiscoveryMode ? revealedNoteNames : undefined,
+            justRevealedNotes: (feedbackDetails?.status === 'correct' || feedbackDetails?.status === 'found') ? feedbackDetails.correctAnswers : [],
+            drillMode: settings.drillMode,
+            quizPhase,
+            animatingSacrifice: animatingSacrifice,
+            keyRefCallback,
+        };
+
+        switch (settings.instrument) {
+            case 'Piano': return <Piano {...props} />;
+            case 'Guitar':
+            case 'Bass': return <Fretboard {...props} instrument={settings.instrument} handedness={settings.handedness} />;
+            default: return null;
+        }
+    }, [handleNotePlayed, isMultiNoteQuestion, activeQuestion, isNoteDiscoveryMode, highlightedUniqueId, foundNotes, incorrectNotesFeedback, instrumentLabelMode, scale, isScaleSweeperMode, sweeperNoteLabels, sweeperFoundNotes, sweeperMines, revealedNoteNames, feedbackDetails, settings.drillMode, quizPhase, animatingSacrifice, keyRefCallback, settings.instrument, settings.handedness]);
+
+    if (completionData) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+              <div className="bg-stone-900/70 p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h2 className="text-4xl font-bold text-orange-400 mb-4">{completionData.finalMessage}</h2>
+                <div className="text-lg text-stone-200 space-y-2 mb-6">
+                    <p>Score: <span className="font-bold text-white">{completionData.score}</span></p>
+                    {completionData.isNewHighScore && <p className="text-yellow-400 font-bold">New High Score!</p>}
+                    {completionData.accuracy !== undefined && <p>Accuracy: <span className="font-bold text-white">{completionData.accuracy}%</span></p>}
+                    {completionData.maxStreak !== undefined && <p>Max Streak: <span className="font-bold text-white">{completionData.maxStreak}</span></p>}
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={handleTryAgain} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-4 rounded-lg">Try Again</button>
+                  <button onClick={onQuit} className="flex-1 bg-stone-600 hover:bg-stone-500 text-white font-bold py-3 px-4 rounded-lg">Quit</button>
+                </div>
+              </div>
+            </div>
+          );
     }
-    handleAnswer(playedUniqueNote, event);
-  }, [handleAnswer, settings.inputMethod, settings.instrument]);
-
-  useMidi(settings.inputMethod === 'MIDI', handleAnswer);
-  useAudioPitch(
-    settings.inputMethod === 'Mic',
-    handleAnswer,
-    settings.audioInputDeviceId,
-    settings.micSensitivity,
-    settings.micGain,
-    settings.micCompressionThreshold,
-    settings.micCompressionRatio
-  );
-
-  const renderedInstrument = useMemo(() => {
-    let correctNotes: string[] = [];
-    let incorrectNote: string | null = null;
-    let incorrectNotes: string[] = incorrectNotesFeedback;
-    let highlightedNotes: string[] = [];
-    let disabledNotes: (string | null)[] = [];
-    let mineNotes: string[] = [];
-    let noteLabels: { [key: string]: string | number } | undefined;
-    let activeNotes: string[] | undefined;
-    let justRevealedNotes: string[] | undefined;
-    let currentScale = scale;
     
-    if (isNoteDiscoveryMode) {
-        if (highlightedUniqueId) {
-            highlightedNotes = [highlightedUniqueId];
-        }
-    } else if (isGalaxyConstructorMode) {
-        highlightedNotes = galaxyConstructedNotes;
-    } else if (isScaleSweeperMode) {
-        correctNotes = sweeperFoundNotes;
-        mineNotes = sweeperMines;
-        noteLabels = sweeperNoteLabels;
-        activeNotes = [...sweeperFoundNotes, ...sweeperMines];
-        if (!isFinalNoteUnlocked) {
-            disabledNotes = [finalOctaveNoteId];
-        }
-    } else {
-        if (showHelp && scale) {
-          highlightedNotes.push(...scale.notes);
-        }
-        if (gameState === 'memory_display' && displayHighlight) {
-          highlightedNotes.push(displayHighlight);
-        }
-        if (isMultiNoteQuestion && (gameState === 'playing' || gameState === 'feedback')) {
-            correctNotes.push(...foundNotes);
-        }
-        if (simonCorrectFlash) {
-            correctNotes.push(simonCorrectFlash);
-        }
-        
-        if (gameState === 'feedback' && feedbackDetails) {
-            if (feedbackDetails.status === 'incorrect' && feedbackDetails.playedNote) {
-                incorrectNote = feedbackDetails.playedNote;
+    if (quizPhase === 'info') {
+        return <PreQuizInfo drillMode={settings.drillMode} onReady={() => setQuizPhase('countdown')} onSkipChange={(skip) => onToggleSkipPreDrillInfo(settings.drillMode, skip)} />;
+    }
+
+    if (quizPhase === 'countdown' || quizPhase === 'intermission' || quizPhase === 'pre-round-animation') {
+        const message = quizPhase === 'intermission' ? (isNoteDiscoveryMode ? `Round ${discoveryRound + 1}` : 'Next Key') : countdownMessage;
+        const onComplete = () => {
+            if (isNoteDiscoveryMode) {
+                if (quizPhase === 'intermission') {
+                    startNoteDiscoveryRound(discoveryRound + 1);
+                } else { // From a failure countdown
+                    startNoteDiscoveryRound(discoveryRound);
+                }
+            } else {
+                setQuizPhase('active');
+            }
+            setCountdownMessage(undefined);
+        };
+        return <Countdown onComplete={onComplete} message={message} />;
+    }
+
+    return (
+        <div className="drill-layout flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 min-h-0 mt-2 sm:mt-4">
+            {showHelp && scale && <HelpModal scale={scale} onClose={() => setShowHelp(false)} />}
+
+            {isGalaxyConstructorMode && currentQuestion && scale &&
+                <GalaxyConstructor scale={scale} builtIntervals={builtIntervals} intervalChoices={intervalChoices} onSelectInterval={handleGalaxyConstructorAnswer} />
+            }
+            {isDegreeDashMode && scale &&
+                <DegreeDash scale={scale} instrumentSettings={{instrument: settings.instrument, handedness: settings.handedness}} phase={degreeDashPhase} round={degreeDashRound} onUpdatePerformance={onUpdatePerformance} onPlacement={() => {}} onRoundComplete={() => {}} disableHints={false}/>
             }
             
-            if (isNoteProfessorMode && feedbackDetails.status === 'correct') {
-                correctNotes.push(...feedbackDetails.correctAnswers);
-            } else if (isSimonGameMode && feedbackDetails.status === 'correct') {
-                correctNotes.push(...feedbackDetails.correctAnswers);
-            } else if (!isSimonGameMode && !isNoteProfessorMode) {
-               correctNotes.push(...feedbackDetails.correctAnswers);
-            }
-        }
-
-        if (settings.drillMode === 'Scale Detective' && activeQuestion?.contextNotes) {
-            const isShowingFullScale = questionPart === 'identify_root' || (gameState === 'feedback' && feedbackDetails?.status === 'correct');
-            const contextUnique = getUniqueAnswersForQuestion({ ...activeQuestion, correctAnswers: activeQuestion.contextNotes as Note[] });
-            if (isShowingFullScale) {
-                const allScaleNotes = getUniqueAnswersForQuestion({ ...activeQuestion, correctAnswers: [...activeQuestion.contextNotes, ...activeQuestion.correctAnswers] as Note[] });
-                correctNotes.push(...allScaleNotes);
-            } else {
-                highlightedNotes.push(...contextUnique);
-                if (feedbackDetails?.status === 'found' && feedbackDetails.playedNote) {
-                     correctNotes.push(feedbackDetails.playedNote);
-                }
-            }
-        }
-    }
-    
-    const commonProps = {
-      onNotePlayed: handleAnswerWithSound,
-      highlightedNotes: [...new Set(highlightedNotes)],
-      correctNotes: [...new Set(correctNotes)],
-      incorrectNotes: incorrectNote ? [...incorrectNotes, incorrectNote] : incorrectNotes,
-      labelMode: instrumentLabelMode,
-      scale: currentScale,
-      noteLabels,
-      disabledNotes: disabledNotes.filter((n): n is string => n !== null),
-      mineNotes,
-      activeNotes,
-      justRevealedNotes,
-      revealedNoteNames,
-      drillMode: settings.drillMode,
-      quizPhase,
-      animatingSacrifice,
-    };
-    
-    switch (settings.instrument) {
-      case 'Piano': return <Piano {...commonProps} />;
-      case 'Guitar':
-      case 'Bass': return <Fretboard instrument={settings.instrument} {...commonProps} handedness={settings.handedness} />;
-      default: return null;
-    }
-  }, [
-      handleAnswerWithSound, incorrectNotesFeedback, isGalaxyConstructorMode, galaxyConstructedNotes,
-      showHelp, scale, gameState, displayHighlight,
-      isMultiNoteQuestion, foundNotes, simonCorrectFlash, feedbackDetails,
-      isSimonGameMode, settings.drillMode, settings.instrument, settings.handedness,
-      activeQuestion, questionPart, instrumentLabelMode,
-      isScaleSweeperMode, sweeperFoundNotes, sweeperMines, sweeperNoteLabels, isFinalNoteUnlocked, finalOctaveNoteId,
-      isNoteProfessorMode, isNoteDiscoveryMode, highlightedUniqueId, revealedNoteNames, quizPhase, animatingSacrifice,
-  ]);
-
-  const handleCountdownComplete = () => {
-    setCountdownMessage(undefined);
-    if (isNoteDiscoveryMode) {
-        if (quizPhase === 'intermission') { // Advancing to next round
-            startNoteDiscoveryRound(discoveryRound + 1);
-        } else { // Retrying current round after losing a life
-            startNoteDiscoveryRound(discoveryRound);
-        }
-    } else {
-        setQuizPhase('active');
-    }
-  };
-
-  const handleQuit = () => {
-    stopNote();
-    onQuit();
-  };
-  
-  const handleDegreeDashPlacement = useCallback((isCorrect: boolean) => {
-    if (isCorrect) {
-        playCorrectSound();
-    } else {
-        playIncorrectSound();
-        if (degreeDashPhase === 'timed_finale') {
-            setBeats(b => Math.max(0, b - settings.beatPenalty));
-        }
-    }
-  }, [playCorrectSound, playIncorrectSound, degreeDashPhase, settings.beatPenalty]);
-
-  const handleDegreeDashRoundComplete = useCallback(() => {
-    setQuizPhase('intermission');
-    setTimeout(() => {
-        const nextRound = degreeDashRound + 1;
-        setDegreeDashRound(nextRound);
-
-        const newQuestions = generateDrillQuestions({ ...settings, key: 'Random', questionCount: 1 }, userData.performance);
-        setQuestions(newQuestions);
-        setCurrentQuestionIndex(0);
-        
-        if (nextRound > 5) {
-            setDegreeDashPhase('timed_finale');
-            setBeats(50);
-            setCurrentBpm(70 + (nextRound - 6) * 5); // Progressive BPM
-            setQuizPhase('countdown');
-        } else {
-            setDegreeDashPhase('fill_in');
-            setQuizPhase('countdown'); // Use countdown for all round transitions
-        }
-    }, 2000);
-  }, [degreeDashRound, settings, userData.performance]);
-  
-    // --- DEGREE DASH PRO LOGIC ---
-    const ddpInitialize = useCallback(() => {
-        const { current } = ddpState;
-        const randomKey = MUSIC_KEYS[Math.floor(Math.random() * MUSIC_KEYS.length)];
-        const newScale = getScale(randomKey, settings.scaleType);
-        onThemeChange(newScale.key);
-
-        current.scale = newScale;
-        current.notePositions.clear();
-        current.questionOrder = [];
-        current.answeredNotes.clear();
-
-        const instrumentWidth = instrumentContainerRef.current?.offsetWidth || window.innerWidth;
-        current.scrollPosition = instrumentWidth;
-
-        let x = 0;
-        if (settings.instrument === 'Piano') {
-            const whiteKeyWidth = 48;
-            const blackKeyWidth = 28;
-            for (let i = 0; i < 120; i++) {
-                const midi = 24 + i;
-                const note = ALL_NOTES[midi % 12];
-                const octave = Math.floor(midi / 12) - 1;
-                const isBlack = note.includes('b') || note.includes('#');
-                const id = `${note}${octave}`;
-                
-                if (newScale.notes.includes(note)) {
-                    const degree = getDegreeFromNote(note, newScale);
-                    if (degree) current.notePositions.set(id, { x: isBlack ? x - (whiteKeyWidth / 2) : x, degree });
-                }
-                if (!isBlack) x += whiteKeyWidth;
-            }
-        } else { // Fretboard
-            const fretWidth = 80;
-            const tuning = settings.instrument === 'Guitar' ? GUITAR_TUNING : BASS_TUNING;
-            const fretNotes = getFretboardNotes(tuning, 60);
-            for (const n of fretNotes) {
-                if (newScale.notes.includes(n.note)) {
-                    const id = `${n.note}-${n.string}-${n.fret}`;
-                    const degree = getDegreeFromNote(n.note, newScale);
-                    if (degree) current.notePositions.set(id, { x: n.fret * fretWidth + 48, degree });
-                }
-            }
-        }
-
-        current.questionOrder = Array.from(current.notePositions.keys()).sort((a, b) => current.notePositions.get(a)!.x - current.notePositions.get(b)!.x);
-        current.currentQuestionIndex = 0;
-        current.isInitialized = true;
-    }, [settings.instrument, settings.scaleType, onThemeChange]);
-    
-    const ddpGameLoop = useCallback((timestamp: number) => {
-        if (gameStateRef.current === 'finished') return;
-        const { current } = ddpState;
-        if (!current.lastTimestamp) current.lastTimestamp = timestamp;
-        
-        const deltaTime = (timestamp - current.lastTimestamp) / 1000;
-        current.lastTimestamp = timestamp;
-        
-        current.scrollPosition -= current.speed * deltaTime;
-
-        const currentId = current.questionOrder[current.currentQuestionIndex];
-        if (currentId) {
-            const noteInfo = current.notePositions.get(currentId);
-            if (noteInfo) {
-                const noteScreenX = noteInfo.x + current.scrollPosition;
-                const containerWidth = instrumentContainerRef.current?.offsetWidth || 0;
-
-                // Note is off the left edge of the screen
-                if (noteScreenX < -containerWidth * 0.1) {
-                    playIncorrectSound();
-                    setBeats(b => Math.max(0, b - settings.beatPenalty));
-                    current.answeredNotes.set(currentId, { isCorrect: false, degree: noteInfo.degree });
-                    current.currentQuestionIndex++;
-                }
-            }
-        }
-
-        if (beats <= 0) {
-            handleFinish(false, "Out of Beats!");
-        }
-
-        // Check if all questions are done for this key
-        if (current.currentQuestionIndex >= current.questionOrder.length) {
-            current.speed += 3;
-            ddpInitialize();
-        }
-
-        setDdpKey(k => k + 1); // Trigger re-render
-        requestAnimationFrame(ddpGameLoop);
-    }, [settings.beatPenalty, ddpInitialize, handleFinish, beats, playIncorrectSound]);
-
-    useEffect(() => {
-        let frameId: number;
-        if (isDegreeDashProMode && quizPhase === 'active' && gameState === 'playing') {
-            if (!ddpState.current.isInitialized) {
-                ddpInitialize();
-            }
-            ddpState.current.lastTimestamp = performance.now();
-            frameId = requestAnimationFrame(ddpGameLoop);
-        }
-        return () => {
-            if (frameId) cancelAnimationFrame(frameId);
-        };
-    }, [isDegreeDashProMode, quizPhase, gameState, ddpInitialize, ddpGameLoop]);
-
-    const handleDegreeDashProSelect = useCallback((degree: number) => {
-        const { current } = ddpState;
-        const currentId = current.questionOrder[current.currentQuestionIndex];
-        if (!currentId) return;
-
-        const noteInfo = current.notePositions.get(currentId);
-        if (!noteInfo) return;
-
-        const isCorrect = degree === noteInfo.degree;
-        if (isCorrect) {
-            playCorrectSound();
-            setScore(s => s + 1);
-            setBeats(b => b + settings.beatAward);
-        } else {
-            playIncorrectSound();
-            setBeats(b => Math.max(0, b - settings.beatPenalty));
-        }
-
-        onUpdatePerformance({ isCorrect, degree, key: current.scale.key, scaleType: current.scale.type, drillMode: 'Degree Dash Pro'});
-        current.answeredNotes.set(currentId, { isCorrect, degree });
-        current.currentQuestionIndex++;
-    }, [settings.beatAward, settings.beatPenalty, playCorrectSound, playIncorrectSound, onUpdatePerformance]);
-
-
-  if (quizPhase === 'info') {
-    return <PreQuizInfo drillMode={settings.drillMode} onReady={() => setQuizPhase('countdown')} onSkipChange={(skip) => onToggleSkipPreDrillInfo(settings.drillMode, skip)} />;
-  }
-
-  if (quizPhase === 'countdown' || quizPhase === 'intermission' || (isScaleSweeperMode && sweeperPhase === 'intermission')) {
-    let message: string | undefined = countdownMessage;
-    if (!message) {
-      if (isScaleSweeperMode && sweeperPhase === 'intermission') message = 'Time Attack!';
-      else if (isNoteDiscoveryMode && quizPhase === 'intermission') message = `Round ${discoveryRound + 1}!`;
-      else if (isDegreeDashMode && quizPhase === 'intermission') {
-        if (degreeDashRound >= 5) message = 'Final Challenge!';
-        else message = `Round ${degreeDashRound + 1}`;
-      }
-    }
-    return <Countdown onComplete={handleCountdownComplete} message={message} />;
-  }
-
-  if (questions.length === 0 && !isScaleSweeperMode && !isDegreeDashProMode || (!currentQuestion && isScaleSweeperMode)) {
-    return <div className="text-center p-8">Loading drill...</div>;
-  }
-  
-  if (gameState === 'finished' && completionData) {
-    let scoreLabel = 'correct';
-    if (isNoteProfessorMode) scoreLabel = 'notes learned';
-    else if (isNoteDiscoveryMode) scoreLabel = 'notes found';
-    else if (isGalaxyConstructorMode) scoreLabel = 'galaxies built';
-    else if (isSimonGameMode) scoreLabel = 'rounds passed';
-    else if (isScaleSweeperMode) scoreLabel = 'scales swept';
-    else if(isDegreeDashMode) scoreLabel = 'rounds cleared';
-    else if (settings.drillMode.includes('BPM')) scoreLabel = 'levels survived';
-
-    return (
-      <div className="bg-stone-900/70 backdrop-blur-lg border border-stone-700/50 p-8 rounded-xl text-center shadow-2xl w-full max-w-md">
-        <h2 className={`text-3xl font-bold mb-2 ${completionData.success ? 'text-green-400' : 'text-red-500'}`}>
-            {completionData.finalMessage}
-        </h2>
-        
-        <div className="text-xl mb-4 text-stone-200">
-            {`Final Score: `}
-            <span className="text-orange-400 font-bold">{completionData.score}</span>
-            {` ${scoreLabel}`}
-        </div>
-
-        {isNoteDiscoveryMode && completionData.success && (
-          <div className="grid grid-cols-3 gap-2 text-sm text-stone-300 bg-black/20 p-3 rounded-lg my-4">
-              <div><span className="font-bold text-green-400">{completionData.accuracy}%</span> Accuracy</div>
-              <div><span className="font-bold text-orange-400">{completionData.maxStreak}</span> Max Streak</div>
-              <div><span className="font-bold text-sky-400">{(completionData.avgResponseTime! / 1000).toFixed(2)}s</span> Avg Time</div>
-          </div>
-        )}
-        
-        {completionData.unlockedItem && (
-            <div className="mt-6 p-4 bg-green-900/50 border border-green-700 rounded-lg">
-                <p className="text-lg font-bold text-green-300 animate-level-up">{completionData.unlockedItem}</p>
+            {(!isGalaxyConstructorMode && !isDegreeDashMode && !isDegreeDashProMode) && (
+            <>
+            <div className={`instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 lg:order-1 overflow-hidden rounded-lg`}>
+                {settings.drillMode === 'BPM Roulette' && <WarpSpeedBackground bpm={currentBpm} />}
+                <div className="relative z-10 w-full flex-1 flex items-center justify-center">
+                    {instrumentComponent}
+                </div>
             </div>
-        )}
-
-        {completionData.success ? (
-          <button
-            onClick={onQuit}
-            className="mt-8 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105"
-          >
-            Continue
-          </button>
-        ) : (
-          <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={handleTryAgain}
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={handleQuit}
-              className="flex-1 bg-stone-600 hover:bg-stone-500 text-white font-bold py-3 px-6 rounded-lg transition"
-            >
-              Main Menu
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const feedbackClass = gameState !== 'feedback' ? 'bg-black/30 border-transparent' : 
-    (feedbackDetails?.status === 'correct' ? 'bg-green-500/20 border-green-500' : 
-     feedbackDetails?.status === 'found' ? 'bg-sky-500/20 border-sky-500' : 
-     'bg-red-500/20 border-red-500');
-
-  const getPrompt = () => {
-      if (!activeQuestion && !isDegreeDashProMode) return 'Loading...';
-      
-      if (isNoteProfessorMode) {
-          if (gameState === 'feedback' && feedbackDetails?.status === 'correct') {
-              return `Excellent! That's ${feedbackDetails.correctAnswers[0]}.`;
-          }
-          return activeQuestion!.prompt;
-      }
-      if (isNoteDiscoveryMode) {
-          if (discoveryRound > 1) return `Find the note!`;
-          return "What note is this?";
-      }
-      if (isGalaxyConstructorMode) return activeQuestion!.prompt;
-      if (isScaleSweeperMode) {
-          if (isFinalNoteUnlocked) return "Find the final octave note!";
-          return activeQuestion!.prompt || "Sweep the scale!";
-      }
-      if (isDegreeDashMode) {
-        const phaseText = degreeDashPhase === 'timed_finale' ? 'Final Challenge' : `Round ${degreeDashRound}/5`;
-        return `${phaseText}: Fill in the ${activeQuestion!.key} ${activeQuestion!.scaleType} scale degrees.`;
-      }
-      if (isDegreeDashProMode) {
-          return `Identify the degrees for ${ddpState.current.scale.key} ${ddpState.current.scale.type}`;
-      }
-      if (gameState === 'memory_display') return `Memorize... (Round ${memoryLevel})`;
-      if (settings.drillMode === 'Scale Detective') {
-          return questionPart === 'find_note' 
-            ? "Find the missing note." 
-            : `What is the root key of the ${activeQuestion!.scaleType} scale?`;
-      }
-      if (isSimonGameMode) {
-          return `Play the sequence! (${memoryPlaybackIndex}/${memoryCurrentSequence.length})`;
-      }
-      return activeQuestion!.prompt;
-  };
-
-  const questionTimeLimit = isSimonGameMode ? QUESTION_BEAT_LIMIT * memoryCurrentSequence.length : QUESTION_BEAT_LIMIT;
-
-  const renderHeader = () => {
-    const beatsLow = !isEducationalMode && beats > 0 && beats <= 10;
-    const effectiveBpm = isScaleSweeperMode ? sweeperBpm : currentBpm;
-    
-    return (
-       <header className="flex justify-between items-center text-stone-300 flex-shrink-0">
-        {/* Left Score/Progress Block */}
-        <div className="min-w-[80px]">
-           {isNoteDiscoveryMode ? (
-               <div className="text-left">
-                    <div className="font-bold text-base sm:text-lg text-stone-100">
-                        Round: {discoveryRound} / 5
-                    </div>
-                    <div className="text-xs text-orange-400 font-semibold">Streak: {streak}</div>
-                    <div className="flex items-center gap-1 mt-1">
-                        {Array.from({ length: lives }).map((_, i) => (
-                            <HeartIcon key={i} className="h-4 w-4 text-red-500" />
-                        ))}
-                    </div>
-               </div>
-           ) : isDegreeDashMode ? (
-                <div className="font-bold text-base sm:text-lg text-stone-100">
-                    Round: {degreeDashRound}
-                </div>
-           ) : isDegreeDashProMode ? (
-                <div className="font-bold text-base sm:text-lg text-stone-100">
-                    Score: {score}
-                </div>
-            ) : isEducationalMode ? (
-                 <div className="font-bold text-base sm:text-lg text-stone-100">
-                    {
-                        isNoteProfessorMode ? `Learned: ${score} / 12` :
-                        isGalaxyConstructorMode ? `Galaxies: ${score} / ${questions.length}` : ''
-                    }
-                </div>
-            ) : isSimonGameMode ? (
-                <div className="flex flex-col text-left text-xs gap-y-0.5">
-                    <div className="font-bold text-sm sm:text-base text-stone-100">Round: {memoryLevel}</div>
-                    <div className="text-stone-400">
-                        {simonKeySequence.length > 0 && <span className="font-semibold">Key: {simonKeySequence[simonCurrentKeyIndex]}</span>}
-                        {currentBpm > 0 && <span className={`font-semibold ml-2`}>BPM: {currentBpm}</span>}
-                    </div>
-                     <div className="text-stone-400">
-                        <span className="font-semibold">Score: {simonScore}</span>
-                        <span className="font-semibold ml-2">High: {userData.simonHighScore}</span>
-                    </div>
-                </div>
-            ) : isScaleSweeperMode ? (
-                <div className="font-bold text-base sm:text-lg text-stone-100">
-                   Round: {`${sweeperScore + 1} / ${sweeperKeySequence.length}`}
-                   {sweeperPhase === 'time_attack' && <span className="text-fuchsia-400 animate-pulse ml-2">{sweeperBpm} BPM</span>}
-               </div>
-            ) : ( // Default case for other modes
-                <div className="flex flex-col text-left text-xs gap-y-0.5">
-                     <span className="font-bold text-base sm:text-lg text-stone-100">
-                        Score: {score}
-                    </span>
-                    {effectiveBpm > 0 && (
-                        <span className={`font-semibold text-sm ${bpmIncreasePulse ? 'animate-bpm-pulse' : 'text-fuchsia-400'}`}>
-                            BPM: {effectiveBpm}
-                        </span>
-                    )}
-                </div>
-            )}
-        </div>
-
-        {/* Center Beats Block */}
-        <div className={`text-2xl sm:text-3xl font-bold relative ${beatsLow ? 'text-red-500 animate-pulse' : 'text-orange-400'}`}>
-            {isEducationalMode || (isDegreeDashMode && degreeDashPhase !== 'timed_finale') ? '∞' : beats}
-            <span className="text-sm sm:text-base font-normal text-stone-400 ml-1">Beats</span>
-            {scoreChange && (
-                <span
-                    key={scoreChange.id}
-                    className={`absolute -top-6 right-0 text-xl sm:text-2xl font-bold animate-float-up ${scoreChange.value > 0 ? 'text-green-400' : 'text-red-500'}`}
-                    style={{textShadow: '0 0 5px black'}}
-                >
-                    {scoreChange.value > 0 ? `+${scoreChange.value}` : scoreChange.value}
-                </span>
-            )}
-        </div>
-        
-        {/* Right Buttons Block */}
-        <div className="flex gap-1 sm:gap-2 min-w-[80px] justify-end">
-            <button onClick={() => setShowHelp(true)} title="Help" className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-full disabled:bg-stone-600">
-                <HelpIcon className="h-5 w-5" />
-            </button>
-            <button
-                onClick={() => setInstrumentLabelMode(p => p === 'notes' ? 'degrees' : 'notes')}
-                title="Toggle Note/Degree Labels"
-                className={`p-2 rounded-full transition-colors disabled:bg-stone-600 ${
-                    instrumentLabelMode === 'degrees' 
-                    ? 'bg-orange-500 text-white' 
-                    : 'bg-stone-600 hover:bg-stone-500 text-stone-200'
-                }`}
-            >
-                <ToggleDegreesIcon className="h-5 w-5" />
-            </button>
-            <button onClick={handleQuit} title="Quit" className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full">
-                <QuitIcon className="h-5 w-5" />
-            </button>
-        </div>
-      </header>
-    );
-  };
-
-  const effectiveBpm = isScaleSweeperMode ? sweeperBpm : currentBpm;
-  const rhythmBarDuration = 60 / effectiveBpm;
-
-  
-  let vignetteOpacity = 0;
-  if (!isEducationalMode && healthPercent < 60) {
-      vignetteOpacity = (1 - (healthPercent / 60)) * 0.8;
-  }
-  
-  return (
-    <div className={`border border-stone-700/20 bg-black/10 backdrop-blur-sm p-2 sm:p-4 rounded-xl shadow-2xl w-full h-full flex flex-col overflow-hidden ${quizPhase === 'pre-round-animation' ? 'animate-screen-shake' : ''}`}>
-        {quizPhase === 'active' && !isEducationalMode && (
-          <>
-            <div className="rhythm-bar" style={{ animationDuration: `${rhythmBarDuration}s` }}></div>
-            <div 
-              className={`vignette-overlay ${isDanger ? 'vignette-danger' : ''}`} 
-              style={{ '--opacity': vignetteOpacity } as React.CSSProperties}
-            ></div>
-          </>
-        )}
-      
-      <div className="relative z-10 flex flex-col w-full h-full">
-        {showHelp && scale && <HelpModal scale={scale} onClose={() => setShowHelp(false)} />}
-        
-        {renderHeader()}
-        
-        {isDegreeDashMode ? (
-            <DegreeDash
-                scale={scale!}
-                instrumentSettings={{ instrument: settings.instrument, handedness: settings.handedness }}
-                phase={degreeDashPhase}
-                round={degreeDashRound}
-                disableHints={false}
-                onUpdatePerformance={onUpdatePerformance}
-                onPlacement={handleDegreeDashPlacement}
-                onRoundComplete={handleDegreeDashRoundComplete}
-            />
-        ) : isDegreeDashProMode ? (
-            <div className="drill-layout flex-1 flex flex-col gap-2 sm:gap-4 min-h-0 mt-2 sm:mt-4">
-                <div className="prompt-container text-center p-2 rounded-lg bg-black/30 flex-shrink-0">
+            
+            <div className="question-panel flex flex-col gap-2 sm:gap-4 lg:w-1/3 lg:max-w-sm lg:order-2">
+                <div className="prompt-container text-center p-2 sm:p-4 rounded-lg border border-transparent bg-black/30 flex-1 flex flex-col justify-center">
+                    <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">{activeQuestion?.drillMode.replace(/([A-Z])/g, ' $1').trim()}</h3>
                     <p className="text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center">
-                        {getPrompt()}
+                        {activeQuestion?.prompt}
                     </p>
                 </div>
-                <div ref={instrumentContainerRef} className="instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden rounded-lg">
-                    {settings.instrument === 'Piano' ? (
-                        <Piano 
-                            onNotePlayed={() => {}} 
-                            isEndless={true}
-                            scrollPosition={ddpState.current.scrollPosition}
-                            scale={ddpState.current.scale}
-                            highlightedNotes={[ddpState.current.questionOrder[ddpState.current.currentQuestionIndex]]}
-                            correctNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => val.isCorrect).map(([key]) => key)}
-                            incorrectNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => !val.isCorrect).map(([key]) => key)}
-                            noteLabels={Object.fromEntries(Array.from(ddpState.current.answeredNotes.entries()).map(([key, val]) => [key, val.degree]))}
-                        />
-                    ) : (
-                        <Fretboard 
-                            instrument={settings.instrument}
-                            handedness={settings.handedness}
-                            onNotePlayed={() => {}}
-                            isEndless={true}
-                            scrollPosition={ddpState.current.scrollPosition}
-                            scale={ddpState.current.scale}
-                            labelMode="degrees"
-                            highlightedNotes={[ddpState.current.questionOrder[ddpState.current.currentQuestionIndex]]}
-                            correctNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => val.isCorrect).map(([key]) => key)}
-                            incorrectNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => !val.isCorrect).map(([key]) => key)}
-                            noteLabels={Object.fromEntries(Array.from(ddpState.current.answeredNotes.entries()).map(([key, val]) => [key, val.degree]))}
-                        />
-                    )}
-                </div>
-                <DegreeSelector onSelect={handleDegreeDashProSelect} />
-            </div>
-        ) : (
-            <div className="drill-layout flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 min-h-0 mt-2 sm:mt-4">
-            
-            <div className="instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 lg:order-1 rounded-lg">
-                {quizPhase === 'active' && !isEducationalMode && (
-                    <div className="absolute inset-0 rounded-lg overflow-hidden">
-                        <WarpSpeedBackground bpm={effectiveBpm} />
-                    </div>
-                )}
-                <div className="relative z-10 w-full flex-1 flex items-center justify-center">
-                    {!isGalaxyConstructorMode ? renderedInstrument : <div></div>}
-                </div>
-            </div>
 
-            <div className="question-panel flex flex-col gap-2 sm:gap-4 lg:w-1/3 lg:max-w-sm lg:order-2">
-                {isGalaxyConstructorMode && currentQuestion && scale ? (
-                    <GalaxyConstructor 
-                        scale={scale}
-                        builtIntervals={builtIntervals}
-                        intervalChoices={intervalChoices}
-                        onSelectInterval={handleGalaxyConstructorAnswer}
-                    />
-                ) : isNoteDiscoveryMode ? (
-                    <div className="flex-1 flex flex-col justify-between">
-                        <div className={`prompt-container text-center p-2 sm:p-4 rounded-lg border transition-colors duration-300 relative overflow-hidden flex-1 flex flex-col justify-center ${feedbackClass}`}>
-                            <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">{settings.drillMode === 'Key Conjurer' ? 'Note Discovery' : settings.drillMode.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                            <p className={`text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center transition-all duration-500 ${isPerfectPulse ? 'animate-perfect-pulse' : ''}`}>
-                                {getPrompt()}
-                            </p>
-                            {reinforcementMessage && <p className="text-sm text-yellow-300 mt-2 animate-pulse">{reinforcementMessage}</p>}
-                        </div>
-                        <div className="actions-container grid grid-cols-2 gap-2 mt-4">
-                            {choiceOptions.map(note => {
-                                const isIncorrect = incorrectChoice === note;
-                                return (
-                                <button
-                                    key={note}
-                                    onClick={() => handleNoteDiscoveryChoice(note)}
-                                    className={`py-3 px-2 rounded-md font-semibold text-lg transition-all duration-200 ${isIncorrect ? 'bg-red-500 animate-wiggle' : 'bg-stone-800 hover:bg-stone-700'} text-white`}
-                                >
-                                    {note}
-                                </button>
-                                )
-                            })}
-                        </div>
+                 <div className="flex justify-between items-center bg-black/30 p-2 rounded-lg">
+                    <div className="flex gap-2">
+                        <button onClick={() => setShowHelp(true)} className="p-2 bg-stone-700/50 rounded-md hover:bg-stone-600/50" title="Show Scale Notes"><HelpIcon className="h-5 w-5"/></button>
+                        <button onClick={() => setInstrumentLabelMode(p => p === 'notes' ? 'degrees' : 'notes')} className="p-2 bg-stone-700/50 rounded-md hover:bg-stone-600/50" title="Toggle Note Labels"><ToggleDegreesIcon className="h-5 w-5"/></button>
                     </div>
-                ) : (
-                <>
-                    <div className={`prompt-container text-center p-2 sm:p-4 rounded-lg border transition-colors duration-300 relative overflow-hidden flex-1 flex flex-col justify-center ${feedbackClass}`}>
-                        <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">{settings.drillMode === 'Key Conjurer' ? 'Note Discovery' : settings.drillMode.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                        {!isEducationalMode && gameState === 'playing' && (
-                            <div 
-                                className="absolute top-0 left-0 h-1 bg-gradient-to-r from-amber-400 to-orange-500" 
-                                style={{ width: `${(questionBeatTimer / questionTimeLimit) * 100}%`, transition: `width ${(60 / currentBpm)}s linear` }}
-                            ></div>
-                        )}
-                        <p className={`text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center transition-all duration-500 ${isPerfectPulse ? 'animate-perfect-pulse' : ''}`}>
-                            {getPrompt()}
-                        </p>
-                        {isMultiNoteQuestion && gameState === 'playing' && (
-                            <div className="text-sm text-stone-300 mt-2">
-                                Found {foundNotes.length} of {activeQuestion.correctAnswers.length}
-                            </div>
-                        )}
-                    </div>
-                    
-                    {settings.drillMode === 'Scale Detective' && questionPart === 'identify_root' && gameState === 'playing' && (
-                        <div className="actions-container grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-3 gap-1 sm:gap-2">
-                            {MUSIC_KEYS.map(key => (
-                                <button
-                                    key={key}
-                                    onClick={() => handleRootKeySelection(key)}
-                                    className="py-2 sm:py-3 px-2 rounded-md font-semibold transition-colors duration-200 bg-stone-800 hover:bg-stone-700 text-white"
-                                >
-                                    {key}
-                                </button>
-                            ))}
+                     {isNoteDiscoveryMode && (
+                        <div className="flex items-center gap-1 text-red-500">
+                             {[...Array(lives)].map((_, i) => <HeartIcon key={i} className="h-6 w-6"/>)}
                         </div>
                     )}
-
-                    {gameState === 'feedback' && settings.drillMode === 'Scale Detective' && selectedRootKey && feedbackQuestion && (
-                        <div className="actions-container grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-3 gap-1 sm:gap-2">
-                            {MUSIC_KEYS.map(key => {
-                                const isCorrect = key === feedbackQuestion.key;
-                                const isSelected = key === selectedRootKey;
-                                let classes = 'bg-stone-800 text-white';
-                                if (isCorrect) {
-                                    classes = 'bg-green-500 text-black transform scale-105';
-                                } else if (isSelected && !isCorrect) {
-                                    classes = 'bg-red-500 text-black';
-                                }
-                                return (
-                                    <button
-                                        key={key}
-                                        disabled
-                                        className={`py-2 sm:py-3 px-2 rounded-md font-semibold transition-all duration-200 ${classes}`}
-                                    >
-                                        {key}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-                </>
-                )}
+                    <button onClick={onQuit} className="p-2 bg-stone-700/50 rounded-md hover:bg-stone-600/50" title="Quit Drill"><QuitIcon className="h-5 w-5"/></button>
+                 </div>
             </div>
-            </div>
-        )}
-      </div>
-    </div>
-  );
+            </>
+            )}
+        </div>
+    );
 };
 
-export default Quiz;
+export default memo(Quiz);

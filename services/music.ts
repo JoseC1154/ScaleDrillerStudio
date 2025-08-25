@@ -1,7 +1,8 @@
 
 
-import { ALL_NOTES, SCALE_FORMULAS, DEGREE_NAMES, MUSIC_KEYS, NASHVILLE_DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, CHORD_TYPES, CHORD_FORMULAS, SCALE_TYPES } from '../constants';
-import { Note, MusicKey, ScaleType, Scale, Question, FretboardNote, DrillSettings, PerformanceData, DrillMode, TuningNote, Key } from '../types';
+
+import { ALL_NOTES, SCALE_FORMULAS, DEGREE_NAMES, MUSIC_KEYS, NASHVILLE_DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, CHORD_TYPES, CHORD_FORMULAS, SCALE_TYPES } from '../constants.ts';
+import { Note, MusicKey, ScaleType, Scale, Question, FretboardNote, DrillSettings, PerformanceData, DrillMode, TuningNote, Key } from '../types.ts';
 
 const getNoteIndex = (note: Note): number => ALL_NOTES.indexOf(note);
 

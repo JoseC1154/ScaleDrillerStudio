@@ -1,6 +1,6 @@
 
-import { ALL_NOTES, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES } from '../constants';
-import { Instrument, Note } from '../types';
+import { ALL_NOTES, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES } from '../constants.ts';
+import { Instrument, Note } from '../types.ts';
 
 let audioContext: AudioContext;
 const getAudioContext = () => {

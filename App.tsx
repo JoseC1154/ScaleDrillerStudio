@@ -1,22 +1,21 @@
 
-
 import React, { useState, useCallback, useEffect } from 'react';
-import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES, DEFAULT_THEME, KEY_THEMES } from './constants';
-import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, KeyTheme, MusicKey } from './types';
-import { loadUserData, saveUserData, updatePerformanceStat } from './services/userData';
-import { Settings } from './components/Settings';
-import Drill from './components/Quiz';
-import InputTester from './components/InputTester';
-import GlobalSettingsModal from './components/GlobalSettingsModal';
-import InputSelector from './components/InputSelector';
-import InstrumentSelector from './components/InstrumentSelector';
-import InfoModal from './components/InfoModal';
-import PerformanceModal from './components/PerformanceModal';
-import BottomNavBar from './components/BottomNavBar';
-import Tuner from './components/Tuner';
-import InteractiveGuide from './components/InteractiveGuide';
-import { SettingsIcon, EnterFullscreenIcon, ExitFullscreenIcon } from './components/Icons';
-import { useDevice } from './hooks/useDevice';
+import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES, DEFAULT_THEME, KEY_THEMES } from './constants.ts';
+import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, KeyTheme, MusicKey } from './types.ts';
+import { loadUserData, saveUserData, updatePerformanceStat } from './services/userData.ts';
+import { Settings } from './components/Settings.tsx';
+import DrillComponent from './components/Quiz.tsx';
+import InputTester from './components/InputTester.tsx';
+import GlobalSettingsModal from './components/GlobalSettingsModal.tsx';
+import InputSelector from './components/InputSelector.tsx';
+import InstrumentSelector from './components/InstrumentSelector.tsx';
+import InfoModal from './components/InfoModal.tsx';
+import PerformanceModal from './components/PerformanceModal.tsx';
+import BottomNavBar from './components/BottomNavBar.tsx';
+import Tuner from './components/Tuner.tsx';
+import InteractiveGuide from './components/InteractiveGuide.tsx';
+import { SettingsIcon, EnterFullscreenIcon, ExitFullscreenIcon } from './components/Icons.tsx';
+import { useDevice } from './hooks/useDevice.ts';
 
 type AppState = 'settings' | 'drill' | 'input_tester';
 
@@ -290,7 +289,7 @@ const App: React.FC = () => {
 
     switch (appState) {
       case 'drill':
-        return <Drill settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} onThemeChange={handleThemeChange} />;
+        return <DrillComponent settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} onThemeChange={handleThemeChange} />;
       case 'input_tester':
         return <InputTester settings={settings} onQuit={handleQuit} onSettingChange={handleSettingChange} />;
       case 'settings':

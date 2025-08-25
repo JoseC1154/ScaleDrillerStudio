@@ -1,8 +1,8 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
-import { register } from './registerServiceWorker';
+import App from './App.tsx';
+import { register } from './registerServiceWorker.ts';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

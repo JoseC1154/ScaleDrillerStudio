@@ -1,6 +1,7 @@
 
 
-import { UserData, PerformanceStat, MusicKey, ScaleType, PerformanceUpdate, DrillMode } from '../types';
+
+import { UserData, PerformanceStat, MusicKey, ScaleType, PerformanceUpdate, DrillMode } from '../types.ts';
 
 const USER_DATA_KEY = 'scale-driller-userData';
 
