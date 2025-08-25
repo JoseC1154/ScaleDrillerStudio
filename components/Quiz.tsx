@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { DrillSettings, Note, Question, Scale, MusicKey, UserData, PerformanceUpdate, DrillMode, FretboardNote, DrillCompletionResult, SweeperPhase, NoteDiscoveryRound, ScaleType, QuizPhase, DegreeDashPhase, Key } from '../types';
 import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale } from '../services/music';
@@ -6,7 +8,7 @@ import { useAudioPitch } from '../hooks/useAudioPitch';
 import Piano from './Piano';
 import Fretboard from './Fretboard';
 import HelpModal from './HelpModal';
-import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, SCALE_TYPES } from '../constants';
+import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, SCALE_TYPES, KEY_THEMES } from '../constants';
 import PreQuizInfo from './PreQuizInfo';
 import Countdown from './Countdown';
 import { playNoteSound } from '../services/sound';
@@ -18,6 +20,8 @@ import { useSustainedNote } from '../hooks/useSustainedNote';
 import WarpSpeedBackground from './WarpSpeedBackground';
 import DegreeSelector from './DegreeSelector';
 import DegreeDash from './DegreeDash';
+import DegreeSelectorModal from './DegreeSelectorModal';
+
 
 interface QuizProps {
   settings: DrillSettings;
@@ -26,6 +30,7 @@ interface QuizProps {
   onUpdatePerformance: (update: PerformanceUpdate) => void;
   onDrillComplete: (result: DrillCompletionResult) => void;
   onToggleSkipPreDrillInfo: (drillMode: DrillMode, skip: boolean) => void;
+  onThemeChange: (key: MusicKey | null) => void;
 }
 
 type InstrumentLabelMode = 'notes' | 'degrees';
@@ -141,7 +146,9 @@ const generateNoteDiscoveryQuestions = (round: number): Question[] => {
 };
 
 
-const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerformance, onDrillComplete, onToggleSkipPreDrillInfo }) => {
+// --- MAIN QUIZ COMPONENT ---
+
+const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerformance, onDrillComplete, onToggleSkipPreDrillInfo, onThemeChange }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -151,7 +158,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
   const [feedbackQuestion, setFeedbackQuestion] = useState<Question | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [scoreChange, setScoreChange] = useState<{ value: number, id: number } | null>(null);
-  const [instrumentLabelMode, setInstrumentLabelMode] = useState<InstrumentLabelMode>('notes');
+  const [instrumentLabelMode, setInstrumentLabelMode] = useState<InstrumentLabelMode>('degrees');
   const [completionData, setCompletionData] = useState<CompletionData | null>(null);
   const [scrollTargetId, setScrollTargetId] = useState<string | null>(null);
   
@@ -159,7 +166,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
   const [selectedRootKey, setSelectedRootKey] = useState<MusicKey | null>(null);
 
   const [foundNotes, setFoundNotes] = useState<string[]>([]);
-  const [incorrectNoteFeedback, setIncorrectNoteFeedback] = useState<string | null>(null);
+  const [incorrectNotesFeedback, setIncorrectNotesFeedback] = useState<string[]>([]);
   const [hadMistakeThisQuestion, setHadMistakeThisQuestion] = useState(false);
 
   // Beat system state
@@ -228,10 +235,25 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
   
   // Degree Dash State
   const isDegreeDashMode = settings.drillMode === 'Degree Dash';
-  const isDegreeDashProMode = settings.drillMode === 'Degree Dash Pro';
-  const isAnyDegreeDash = isDegreeDashMode || isDegreeDashProMode;
   const [degreeDashRound, setDegreeDashRound] = useState(1);
   const [degreeDashPhase, setDegreeDashPhase] = useState<DegreeDashPhase>('fill_in');
+  
+  // Degree Dash Pro State
+  const isDegreeDashProMode = settings.drillMode === 'Degree Dash Pro';
+  const [ddpKey, setDdpKey] = useState(0); // Trigger for state updates from the loop
+  const ddpState = useRef({
+      scrollPosition: 0,
+      speed: 15, // pixels per second
+      lastTimestamp: 0,
+      notePositions: new Map<string, { x: number, degree: number }>(),
+      questionOrder: [] as string[],
+      currentQuestionIndex: 0,
+      answeredNotes: new Map<string, { isCorrect: boolean, degree: number }>(),
+      scale: getScale('C', 'Major'),
+      isInitialized: false,
+  });
+  const instrumentContainerRef = useRef<HTMLDivElement>(null);
+
 
   // Note Professor state
   const isNoteProfessorMode = settings.drillMode === 'Note Professor';
@@ -274,6 +296,12 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
 
   const activeQuestion = feedbackQuestion || currentQuestion;
   const isMultiNoteQuestion = activeQuestion?.correctAnswers.length > 1 && !isGalaxyConstructorMode && !isScaleSweeperMode && settings.drillMode !== 'Scale Detective' && settings.drillMode !== 'Simon Memory Game' && !isNoteDiscoveryMode;
+
+  useEffect(() => {
+    if (currentQuestion) {
+      onThemeChange(currentQuestion.key);
+    }
+  }, [currentQuestion, onThemeChange]);
 
   useEffect(() => {
     audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -326,9 +354,10 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
   const playTickSound = useCallback(() => playTone(1200, 0.05, 'triangle', 0.1), [playTone]);
 
   const scale: Scale | null = useMemo(() => {
+    if (isDegreeDashProMode) return ddpState.current.scale;
     if (!activeQuestion) return null;
     return getScale(activeQuestion.key, activeQuestion.scaleType);
-  }, [activeQuestion]);
+  }, [activeQuestion, isDegreeDashProMode]);
 
   const handleFinish = useCallback((success: boolean, customMessage?: string) => {
     stopNote();
@@ -338,13 +367,14 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
       playLossSound();
     }
 
-    const finalScore = isSimonGameMode ? simonScore : (isGalaxyConstructorMode ? score : (isScaleSweeperMode ? sweeperScore : (isNoteDiscoveryMode ? totalCorrectInDrill : (isAnyDegreeDash ? Math.max(0, degreeDashRound - 1) : score))));
+    const finalScore = isSimonGameMode ? simonScore : (isGalaxyConstructorMode ? score : (isScaleSweeperMode ? sweeperScore : (isNoteDiscoveryMode ? totalCorrectInDrill : (isDegreeDashMode ? Math.max(0, degreeDashRound - 1) : score))));
     let totalQuestions = questions.length;
     if (isGalaxyConstructorMode) totalQuestions = score;
     if (isNoteDiscoveryMode) totalQuestions = questions.length;
     if (isSimonGameMode) totalQuestions = simonKeySequence.length * MAX_MEMORY_LEVEL;
     if (isScaleSweeperMode) totalQuestions = sweeperKeySequence.length;
-    if (isAnyDegreeDash) totalQuestions = 5;
+    if (isDegreeDashMode) totalQuestions = degreeDashRound;
+
 
     let finalMessage = success ? (customMessage || "Drill Complete!") : "BEATS DROPPED!";
     let unlockedItem: string | null = null;
@@ -385,7 +415,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     });
     setGameState('finished');
     onDrillComplete({ score: finalScore, totalQuestions, level: settings.level, success, drillMode: settings.drillMode, bpmLevel: correctAnswersInLevel });
-  }, [score, questions.length, settings, userData, onDrillComplete, memoryLevel, isSimonGameMode, correctAnswersInLevel, simonScore, simonKeySequence.length, isGalaxyConstructorMode, isScaleSweeperMode, sweeperScore, sweeperKeySequence.length, playVictorySound, playLossSound, stopNote, isNoteDiscoveryMode, totalCorrectInDrill, totalIncorrectInDrill, totalResponseTime, maxStreak, streak, isAnyDegreeDash, degreeDashRound]);
+  }, [score, questions.length, settings, userData, onDrillComplete, memoryLevel, isSimonGameMode, correctAnswersInLevel, simonScore, simonKeySequence.length, isGalaxyConstructorMode, isScaleSweeperMode, sweeperScore, sweeperKeySequence.length, playVictorySound, playLossSound, stopNote, isNoteDiscoveryMode, totalCorrectInDrill, totalIncorrectInDrill, totalResponseTime, maxStreak, streak, isDegreeDashMode, degreeDashRound]);
 
   const goToNextQuestion = useCallback(() => {
     stopNote();
@@ -500,7 +530,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     setQuestionPart('find_note');
     setSelectedRootKey(null);
     setFoundNotes([]);
-    setIncorrectNoteFeedback(null);
+    setIncorrectNotesFeedback([]);
     setHadMistakeThisQuestion(false);
     setBeats(settings.totalBeats);
     setCurrentBpm(settings.bpm);
@@ -541,6 +571,9 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     
     setDegreeDashRound(1);
     setDegreeDashPhase('fill_in');
+    
+    ddpState.current.isInitialized = false;
+
 
     if (isNoteDiscoveryMode) {
       startNoteDiscoveryRound(1);
@@ -569,7 +602,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         }]);
     } else {
         let generatedQuestions;
-        if (isAnyDegreeDash) {
+        if (isDegreeDashMode || isDegreeDashProMode) {
             // Always start Degree Dash modes in C
             generatedQuestions = generateDrillQuestions({ ...settings, key: 'C', questionCount: 1 });
         } else {
@@ -577,7 +610,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         }
         setQuestions(generatedQuestions);
     }
-  }, [settings, isSimonGameMode, isScaleSweeperMode, userData.performance, userData.preDrillInfoSeen, isNoteDiscoveryMode, startNoteDiscoveryRound, isAnyDegreeDash]);
+  }, [settings, isSimonGameMode, isScaleSweeperMode, userData.performance, userData.preDrillInfoSeen, isNoteDiscoveryMode, startNoteDiscoveryRound, isDegreeDashMode, isDegreeDashProMode]);
 
   useEffect(() => {
     // This effect resets the quiz state and should only run when the quiz settings change,
@@ -722,11 +755,10 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
   
   // Main BPM Timer - drives game ticks and Simon Game display
   useEffect(() => {
-    if ((gameState !== 'playing' && gameState !== 'memory_display') || quizPhase !== 'active' || isEducationalMode) return;
+    if ((gameState !== 'playing' && gameState !== 'memory_display') || quizPhase !== 'active' || isEducationalMode || isDegreeDashProMode) return;
     if (isScaleSweeperMode && sweeperPhaseRef.current !== 'time_attack') return;
     if (isNoteDiscoveryMode && discoveryRound === 1) return;
-    if(isAnyDegreeDash && degreeDashPhaseRef.current !== 'timed_finale') return;
-
+    if(isDegreeDashMode && degreeDashPhaseRef.current !== 'timed_finale') return;
 
     let effectiveBpm = isScaleSweeperMode ? sweeperBpm : currentBpm;
     if (effectiveBpm === 0) return;
@@ -762,7 +794,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
                     clearInterval(interval);
                     if (isNoteDiscoveryMode) {
                         handleNoteDiscoveryFailure("Time's Up!");
-                    } else if(isAnyDegreeDash) {
+                    } else if(isDegreeDashMode) {
                         handleFinish(false, "Out of time!");
                     } else {
                         handleFinish(false);
@@ -785,7 +817,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [gameState, quizPhase, playTickSound, handleFinish, handleQuestionTimeOut, isSimonGameMode, currentBpm, isGalaxyConstructorMode, isScaleSweeperMode, sweeperBpm, sweeperPhase, isEducationalMode, isNoteDiscoveryMode, discoveryRound, handleNoteDiscoveryFailure, isAnyDegreeDash, degreeDashPhase]);
+  }, [gameState, quizPhase, playTickSound, handleFinish, handleQuestionTimeOut, isSimonGameMode, currentBpm, isGalaxyConstructorMode, isScaleSweeperMode, sweeperBpm, sweeperPhase, isEducationalMode, isNoteDiscoveryMode, discoveryRound, handleNoteDiscoveryFailure, isDegreeDashMode, degreeDashPhase, isDegreeDashProMode]);
   
   const healthPercent = (beats / settings.totalBeats) * 100;
   const isDanger = !isEducationalMode && healthPercent < 25;
@@ -851,12 +883,14 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         }
     }, [playCorrectSound, settings.beatAward, correctAnswersInLevel, hadMistakeThisQuestion, questionBeatTimer, isSimonGameMode, isGalaxyConstructorMode, isScaleSweeperMode, isEducationalMode]);
 
-    const handleSingleNoteIncorrect = useCallback(() => {
+    const handleSingleNoteIncorrect = useCallback((playedUniqueNote: string) => {
         stopNote();
         playIncorrectSound();
         setBeats(b => Math.max(0, b - settings.beatPenalty));
         setScoreChange({ value: -settings.beatPenalty, id: Date.now() });
         setHadMistakeThisQuestion(true);
+        setIncorrectNotesFeedback([playedUniqueNote]);
+        setTimeout(() => setIncorrectNotesFeedback([]), 500);
     }, [playIncorrectSound, settings.beatPenalty, stopNote]);
     
     const showFeedbackAndMoveNext = useCallback((isCorrect: boolean, playedUniqueNote: string) => {
@@ -878,13 +912,13 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         if (isCorrect) {
             handleSingleNoteCorrect();
         } else {
-            handleSingleNoteIncorrect();
+            handleSingleNoteIncorrect(playedUniqueNote);
         }
         showFeedbackAndMoveNext(isCorrect, playedUniqueNote);
     }, [currentQuestion, onUpdatePerformance, settings.drillMode, handleSingleNoteCorrect, handleSingleNoteIncorrect, showFeedbackAndMoveNext]);
 
     const handleMultiNoteAnswer = useCallback((playedUniqueNote: string, playedNoteName: Note) => {
-        if (incorrectNoteFeedback) return;
+        if (incorrectNotesFeedback.length > 0) return;
         
         const expectedAnswers = getUniqueAnswersForQuestion(currentQuestion!);
         const areAnswersOctaveSpecific = expectedAnswers.length > 0 && /\d/.test(expectedAnswers[0]);
@@ -904,11 +938,9 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
                 showFeedbackAndMoveNext(true, playedUniqueNote);
             }
         } else {
-            setIncorrectNoteFeedback(playedUniqueNote);
-            setTimeout(() => setIncorrectNoteFeedback(null), 500);
-            handleSingleNoteIncorrect();
+            handleSingleNoteIncorrect(playedUniqueNote);
         }
-    }, [incorrectNoteFeedback, currentQuestion, foundNotes, playCorrectSound, onUpdatePerformance, hadMistakeThisQuestion, settings.drillMode, handleSingleNoteCorrect, showFeedbackAndMoveNext, handleSingleNoteIncorrect]);
+    }, [incorrectNotesFeedback, currentQuestion, foundNotes, playCorrectSound, onUpdatePerformance, hadMistakeThisQuestion, settings.drillMode, handleSingleNoteCorrect, showFeedbackAndMoveNext, handleSingleNoteIncorrect]);
     
     const handleScaleDetectiveAnswer = useCallback((playedUniqueNote: string, playedNoteName: Note) => {
         if (questionPart !== 'find_note' || !currentQuestion) return;
@@ -930,7 +962,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
                 setQuestionBeatTimer(QUESTION_BEAT_LIMIT);
             }, 1000);
         } else {
-            handleSingleNoteIncorrect();
+            handleSingleNoteIncorrect(playedUniqueNote);
             setFeedbackDetails({ status: 'incorrect', playedNote: playedUniqueNote, correctAnswers: answers });
             setTimeout(() => {
                 setGameState('playing');
@@ -981,7 +1013,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         } else {
             stopNote();
             playIncorrectSound();
-            setIncorrectNoteFeedback(playedUniqueNote);
+            setIncorrectNotesFeedback([playedUniqueNote]);
             setGameState('feedback');
             setBeats(b => Math.max(0, b - settings.beatPenalty));
             setScoreChange({ value: -settings.beatPenalty, id: Date.now() });
@@ -1088,8 +1120,8 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
             stopNote();
             playIncorrectSound();
             setSweeperMines(prev => [...prev, playedUniqueNote]);
-            setIncorrectNoteFeedback(playedUniqueNote);
-            setTimeout(() => setIncorrectNoteFeedback(null), 500);
+            setIncorrectNotesFeedback([playedUniqueNote]);
+            setTimeout(() => setIncorrectNotesFeedback([]), 500);
             
             setBeats(b => Math.max(0, b - settings.beatPenalty));
             setScoreChange({ value: -settings.beatPenalty, id: Date.now() });
@@ -1123,8 +1155,8 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
           stopNote();
           playIncorrectSound();
           setHadMistakeThisQuestion(true);
-          setIncorrectNoteFeedback(playedUniqueNote);
-          setTimeout(() => setIncorrectNoteFeedback(null), 500);
+          setIncorrectNotesFeedback([playedUniqueNote]);
+          setTimeout(() => setIncorrectNotesFeedback([]), 500);
       }
     }, [currentQuestion, currentQuestionIndex, questions.length, onUpdatePerformance, playCorrectSound, playIncorrectSound, goToNextQuestion, handleFinish, stopNote]);
 
@@ -1181,9 +1213,9 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
             } else setReinforcementMessage(null);
 
 
-            const config = NOTE_DISCOVERY_ROUNDS_CONFIG[discoveryRound];
+            const config = NOTE_DISCOVERY_ROUNDS_CONFIG[discoveryRound as NoteDiscoveryRound];
             if (config.penalty > 0) {
-                const revealedArray = Array.from(revealedNoteNames);
+                const revealedArray: Note[] = Array.from(revealedNoteNames);
                 const sacrificed: Note[] = [];
                 for (let i = 0; i < config.penalty && revealedArray.length > 0; i++) {
                     const randomIndex = Math.floor(Math.random() * revealedArray.length);
@@ -1216,7 +1248,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         
         const playedNoteName = playedUniqueNote.replace(/-?\d.*$/, '') as Note;
 
-        if (isAnyDegreeDash) return;
+        if (isDegreeDashMode || isDegreeDashProMode) return;
         
         playNote(playedUniqueNote);
 
@@ -1231,7 +1263,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         else if (settings.drillMode === 'Scale Detective') handleScaleDetectiveAnswer(playedUniqueNote, playedNoteName);
         else if (isMultiNoteQuestion) handleMultiNoteAnswer(playedUniqueNote, playedNoteName);
         else handleStandardAnswer(playedUniqueNote, playedNoteName);
-    }, [gameState, quizPhase, currentQuestion, isNoteProfessorMode, isGalaxyConstructorMode, isScaleSweeperMode, isSimonGameMode, isMultiNoteQuestion, settings.drillMode, handleNoteProfessorAnswer, handleScaleSweeperAnswer, handleSimonGameAnswer, handleScaleDetectiveAnswer, handleMultiNoteAnswer, handleStandardAnswer, isNoteDiscoveryMode, isAnyDegreeDash, playNote, stopNote]);
+    }, [gameState, quizPhase, currentQuestion, isNoteProfessorMode, isGalaxyConstructorMode, isScaleSweeperMode, isSimonGameMode, isMultiNoteQuestion, settings.drillMode, handleNoteProfessorAnswer, handleScaleSweeperAnswer, handleSimonGameAnswer, handleScaleDetectiveAnswer, handleMultiNoteAnswer, handleStandardAnswer, isNoteDiscoveryMode, isDegreeDashMode, isDegreeDashProMode, playNote, stopNote]);
 
   const handleAnswerWithSound = useCallback((playedUniqueNote: string, event?: React.MouseEvent) => {
     if (settings.inputMethod === 'Touch') {
@@ -1253,7 +1285,8 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
 
   const renderedInstrument = useMemo(() => {
     let correctNotes: string[] = [];
-    let incorrectNote: string | null = incorrectNoteFeedback;
+    let incorrectNote: string | null = null;
+    let incorrectNotes: string[] = incorrectNotesFeedback;
     let highlightedNotes: string[] = [];
     let disabledNotes: (string | null)[] = [];
     let mineNotes: string[] = [];
@@ -1323,7 +1356,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
       onNotePlayed: handleAnswerWithSound,
       highlightedNotes: [...new Set(highlightedNotes)],
       correctNotes: [...new Set(correctNotes)],
-      incorrectNote,
+      incorrectNotes: incorrectNote ? [...incorrectNotes, incorrectNote] : incorrectNotes,
       labelMode: instrumentLabelMode,
       scale: currentScale,
       noteLabels,
@@ -1344,7 +1377,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
       default: return null;
     }
   }, [
-      handleAnswerWithSound, incorrectNoteFeedback, isGalaxyConstructorMode, galaxyConstructedNotes,
+      handleAnswerWithSound, incorrectNotesFeedback, isGalaxyConstructorMode, galaxyConstructedNotes,
       showHelp, scale, gameState, displayHighlight,
       isMultiNoteQuestion, foundNotes, simonCorrectFlash, feedbackDetails,
       isSimonGameMode, settings.drillMode, settings.instrument, settings.handedness,
@@ -1387,25 +1420,150 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     setTimeout(() => {
         const nextRound = degreeDashRound + 1;
         setDegreeDashRound(nextRound);
+
+        const newQuestions = generateDrillQuestions({ ...settings, key: 'Random', questionCount: 1 }, userData.performance);
+        setQuestions(newQuestions);
+        setCurrentQuestionIndex(0);
         
-        if (nextRound <= 6) {
-             const newQuestions = generateDrillQuestions({ ...settings, key: 'Random', questionCount: 1 }, userData.performance);
-             setQuestions(newQuestions);
-             setCurrentQuestionIndex(0);
-             if (nextRound > 5) {
-                setDegreeDashPhase('timed_finale');
-                setBeats(50);
-                setCurrentBpm(70);
-                setQuizPhase('countdown');
-             } else {
-                setDegreeDashPhase('fill_in');
-                // The countdown component will handle setting phase back to 'active'
-             }
+        if (nextRound > 5) {
+            setDegreeDashPhase('timed_finale');
+            setBeats(50);
+            setCurrentBpm(70 + (nextRound - 6) * 5); // Progressive BPM
+            setQuizPhase('countdown');
         } else {
-            handleFinish(true, "Degree Dash Mastered!");
+            setDegreeDashPhase('fill_in');
+            setQuizPhase('countdown'); // Use countdown for all round transitions
         }
     }, 2000);
-  }, [degreeDashRound, handleFinish, settings, userData.performance]);
+  }, [degreeDashRound, settings, userData.performance]);
+  
+    // --- DEGREE DASH PRO LOGIC ---
+    const ddpInitialize = useCallback(() => {
+        const { current } = ddpState;
+        const randomKey = MUSIC_KEYS[Math.floor(Math.random() * MUSIC_KEYS.length)];
+        const newScale = getScale(randomKey, settings.scaleType);
+        onThemeChange(newScale.key);
+
+        current.scale = newScale;
+        current.notePositions.clear();
+        current.questionOrder = [];
+        current.answeredNotes.clear();
+
+        const instrumentWidth = instrumentContainerRef.current?.offsetWidth || window.innerWidth;
+        current.scrollPosition = instrumentWidth;
+
+        let x = 0;
+        if (settings.instrument === 'Piano') {
+            const whiteKeyWidth = 48;
+            const blackKeyWidth = 28;
+            for (let i = 0; i < 120; i++) {
+                const midi = 24 + i;
+                const note = ALL_NOTES[midi % 12];
+                const octave = Math.floor(midi / 12) - 1;
+                const isBlack = note.includes('b') || note.includes('#');
+                const id = `${note}${octave}`;
+                
+                if (newScale.notes.includes(note)) {
+                    const degree = getDegreeFromNote(note, newScale);
+                    if (degree) current.notePositions.set(id, { x: isBlack ? x - (whiteKeyWidth / 2) : x, degree });
+                }
+                if (!isBlack) x += whiteKeyWidth;
+            }
+        } else { // Fretboard
+            const fretWidth = 80;
+            const tuning = settings.instrument === 'Guitar' ? GUITAR_TUNING : BASS_TUNING;
+            const fretNotes = getFretboardNotes(tuning, 60);
+            for (const n of fretNotes) {
+                if (newScale.notes.includes(n.note)) {
+                    const id = `${n.note}-${n.string}-${n.fret}`;
+                    const degree = getDegreeFromNote(n.note, newScale);
+                    if (degree) current.notePositions.set(id, { x: n.fret * fretWidth + 48, degree });
+                }
+            }
+        }
+
+        current.questionOrder = Array.from(current.notePositions.keys()).sort((a, b) => current.notePositions.get(a)!.x - current.notePositions.get(b)!.x);
+        current.currentQuestionIndex = 0;
+        current.isInitialized = true;
+    }, [settings.instrument, settings.scaleType, onThemeChange]);
+    
+    const ddpGameLoop = useCallback((timestamp: number) => {
+        if (gameStateRef.current === 'finished') return;
+        const { current } = ddpState;
+        if (!current.lastTimestamp) current.lastTimestamp = timestamp;
+        
+        const deltaTime = (timestamp - current.lastTimestamp) / 1000;
+        current.lastTimestamp = timestamp;
+        
+        current.scrollPosition -= current.speed * deltaTime;
+
+        const currentId = current.questionOrder[current.currentQuestionIndex];
+        if (currentId) {
+            const noteInfo = current.notePositions.get(currentId);
+            if (noteInfo) {
+                const noteScreenX = noteInfo.x + current.scrollPosition;
+                const containerWidth = instrumentContainerRef.current?.offsetWidth || 0;
+
+                // Note is off the left edge of the screen
+                if (noteScreenX < -containerWidth * 0.1) {
+                    playIncorrectSound();
+                    setBeats(b => Math.max(0, b - settings.beatPenalty));
+                    current.answeredNotes.set(currentId, { isCorrect: false, degree: noteInfo.degree });
+                    current.currentQuestionIndex++;
+                }
+            }
+        }
+
+        if (beats <= 0) {
+            handleFinish(false, "Out of Beats!");
+        }
+
+        // Check if all questions are done for this key
+        if (current.currentQuestionIndex >= current.questionOrder.length) {
+            current.speed += 3;
+            ddpInitialize();
+        }
+
+        setDdpKey(k => k + 1); // Trigger re-render
+        requestAnimationFrame(ddpGameLoop);
+    }, [settings.beatPenalty, ddpInitialize, handleFinish, beats, playIncorrectSound]);
+
+    useEffect(() => {
+        let frameId: number;
+        if (isDegreeDashProMode && quizPhase === 'active' && gameState === 'playing') {
+            if (!ddpState.current.isInitialized) {
+                ddpInitialize();
+            }
+            ddpState.current.lastTimestamp = performance.now();
+            frameId = requestAnimationFrame(ddpGameLoop);
+        }
+        return () => {
+            if (frameId) cancelAnimationFrame(frameId);
+        };
+    }, [isDegreeDashProMode, quizPhase, gameState, ddpInitialize, ddpGameLoop]);
+
+    const handleDegreeDashProSelect = useCallback((degree: number) => {
+        const { current } = ddpState;
+        const currentId = current.questionOrder[current.currentQuestionIndex];
+        if (!currentId) return;
+
+        const noteInfo = current.notePositions.get(currentId);
+        if (!noteInfo) return;
+
+        const isCorrect = degree === noteInfo.degree;
+        if (isCorrect) {
+            playCorrectSound();
+            setScore(s => s + 1);
+            setBeats(b => b + settings.beatAward);
+        } else {
+            playIncorrectSound();
+            setBeats(b => Math.max(0, b - settings.beatPenalty));
+        }
+
+        onUpdatePerformance({ isCorrect, degree, key: current.scale.key, scaleType: current.scale.type, drillMode: 'Degree Dash Pro'});
+        current.answeredNotes.set(currentId, { isCorrect, degree });
+        current.currentQuestionIndex++;
+    }, [settings.beatAward, settings.beatPenalty, playCorrectSound, playIncorrectSound, onUpdatePerformance]);
 
 
   if (quizPhase === 'info') {
@@ -1417,7 +1575,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     if (!message) {
       if (isScaleSweeperMode && sweeperPhase === 'intermission') message = 'Time Attack!';
       else if (isNoteDiscoveryMode && quizPhase === 'intermission') message = `Round ${discoveryRound + 1}!`;
-      else if (isAnyDegreeDash && quizPhase === 'intermission') {
+      else if (isDegreeDashMode && quizPhase === 'intermission') {
         if (degreeDashRound >= 5) message = 'Final Challenge!';
         else message = `Round ${degreeDashRound + 1}`;
       }
@@ -1425,7 +1583,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     return <Countdown onComplete={handleCountdownComplete} message={message} />;
   }
 
-  if (questions.length === 0 && !isScaleSweeperMode || (!currentQuestion && isScaleSweeperMode)) {
+  if (questions.length === 0 && !isScaleSweeperMode && !isDegreeDashProMode || (!currentQuestion && isScaleSweeperMode)) {
     return <div className="text-center p-8">Loading drill...</div>;
   }
   
@@ -1436,7 +1594,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
     else if (isGalaxyConstructorMode) scoreLabel = 'galaxies built';
     else if (isSimonGameMode) scoreLabel = 'rounds passed';
     else if (isScaleSweeperMode) scoreLabel = 'scales swept';
-    else if(isAnyDegreeDash) scoreLabel = 'rounds cleared';
+    else if(isDegreeDashMode) scoreLabel = 'rounds cleared';
     else if (settings.drillMode.includes('BPM')) scoreLabel = 'levels survived';
 
     return (
@@ -1498,42 +1656,40 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
      'bg-red-500/20 border-red-500');
 
   const getPrompt = () => {
-      if (!activeQuestion) {
-          if (isGalaxyConstructorMode) return "Construct the Galaxy...";
-          if (isNoteDiscoveryMode) return "What note is this?";
-          return 'Loading...';
-      }
+      if (!activeQuestion && !isDegreeDashProMode) return 'Loading...';
       
       if (isNoteProfessorMode) {
           if (gameState === 'feedback' && feedbackDetails?.status === 'correct') {
               return `Excellent! That's ${feedbackDetails.correctAnswers[0]}.`;
           }
-          return activeQuestion.prompt;
+          return activeQuestion!.prompt;
       }
       if (isNoteDiscoveryMode) {
           if (discoveryRound > 1) return `Find the note!`;
           return "What note is this?";
       }
-      if (isGalaxyConstructorMode) return activeQuestion.prompt;
+      if (isGalaxyConstructorMode) return activeQuestion!.prompt;
       if (isScaleSweeperMode) {
           if (isFinalNoteUnlocked) return "Find the final octave note!";
-          return activeQuestion.prompt || "Sweep the scale!";
+          return activeQuestion!.prompt || "Sweep the scale!";
       }
-      if (isAnyDegreeDash) {
-        const title = isDegreeDashProMode ? 'Degree Dash Pro' : 'Degree Dash';
+      if (isDegreeDashMode) {
         const phaseText = degreeDashPhase === 'timed_finale' ? 'Final Challenge' : `Round ${degreeDashRound}/5`;
-        return `${phaseText}: Fill in the ${activeQuestion.key} ${activeQuestion.scaleType} scale degrees.`;
+        return `${phaseText}: Fill in the ${activeQuestion!.key} ${activeQuestion!.scaleType} scale degrees.`;
+      }
+      if (isDegreeDashProMode) {
+          return `Identify the degrees for ${ddpState.current.scale.key} ${ddpState.current.scale.type}`;
       }
       if (gameState === 'memory_display') return `Memorize... (Round ${memoryLevel})`;
       if (settings.drillMode === 'Scale Detective') {
           return questionPart === 'find_note' 
             ? "Find the missing note." 
-            : `What is the root key of the ${activeQuestion.scaleType} scale?`;
+            : `What is the root key of the ${activeQuestion!.scaleType} scale?`;
       }
       if (isSimonGameMode) {
           return `Play the sequence! (${memoryPlaybackIndex}/${memoryCurrentSequence.length})`;
       }
-      return activeQuestion.prompt;
+      return activeQuestion!.prompt;
   };
 
   const questionTimeLimit = isSimonGameMode ? QUESTION_BEAT_LIMIT * memoryCurrentSequence.length : QUESTION_BEAT_LIMIT;
@@ -1558,11 +1714,15 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
                         ))}
                     </div>
                </div>
-           ) : isAnyDegreeDash ? (
+           ) : isDegreeDashMode ? (
                 <div className="font-bold text-base sm:text-lg text-stone-100">
-                    Round: {Math.min(5, degreeDashRound)} / 5
+                    Round: {degreeDashRound}
                 </div>
-           ) : isEducationalMode ? (
+           ) : isDegreeDashProMode ? (
+                <div className="font-bold text-base sm:text-lg text-stone-100">
+                    Score: {score}
+                </div>
+            ) : isEducationalMode ? (
                  <div className="font-bold text-base sm:text-lg text-stone-100">
                     {
                         isNoteProfessorMode ? `Learned: ${score} / 12` :
@@ -1602,7 +1762,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
 
         {/* Center Beats Block */}
         <div className={`text-2xl sm:text-3xl font-bold relative ${beatsLow ? 'text-red-500 animate-pulse' : 'text-orange-400'}`}>
-            {isEducationalMode || (isAnyDegreeDash && degreeDashPhase !== 'timed_finale') ? '∞' : beats}
+            {isEducationalMode || (isDegreeDashMode && degreeDashPhase !== 'timed_finale') ? '∞' : beats}
             <span className="text-sm sm:text-base font-normal text-stone-400 ml-1">Beats</span>
             {scoreChange && (
                 <span
@@ -1649,7 +1809,7 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
   }
   
   return (
-    <div className={`bg-stone-900/70 backdrop-blur-lg border border-stone-700/50 p-2 sm:p-4 rounded-xl shadow-2xl w-full h-full flex flex-col overflow-hidden ${quizPhase === 'pre-round-animation' ? 'animate-screen-shake' : ''}`}>
+    <div className={`border border-stone-700/20 bg-black/10 backdrop-blur-sm p-2 sm:p-4 rounded-xl shadow-2xl w-full h-full flex flex-col overflow-hidden ${quizPhase === 'pre-round-animation' ? 'animate-screen-shake' : ''}`}>
         {quizPhase === 'active' && !isEducationalMode && (
           <>
             <div className="rhythm-bar" style={{ animationDuration: `${rhythmBarDuration}s` }}></div>
@@ -1665,22 +1825,63 @@ const Quiz: React.FC<QuizProps> = ({ settings, userData, onQuit, onUpdatePerform
         
         {renderHeader()}
         
-        {isAnyDegreeDash && currentQuestion && scale ? (
+        {isDegreeDashMode ? (
             <DegreeDash
-                scale={scale}
+                scale={scale!}
                 instrumentSettings={{ instrument: settings.instrument, handedness: settings.handedness }}
                 phase={degreeDashPhase}
                 round={degreeDashRound}
-                disableHints={isDegreeDashProMode}
+                disableHints={false}
                 onUpdatePerformance={onUpdatePerformance}
                 onPlacement={handleDegreeDashPlacement}
                 onRoundComplete={handleDegreeDashRoundComplete}
             />
+        ) : isDegreeDashProMode ? (
+            <div className="drill-layout flex-1 flex flex-col gap-2 sm:gap-4 min-h-0 mt-2 sm:mt-4">
+                <div className="prompt-container text-center p-2 rounded-lg bg-black/30 flex-shrink-0">
+                    <p className="text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center">
+                        {getPrompt()}
+                    </p>
+                </div>
+                <div ref={instrumentContainerRef} className="instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden rounded-lg">
+                    {settings.instrument === 'Piano' ? (
+                        <Piano 
+                            onNotePlayed={() => {}} 
+                            isEndless={true}
+                            scrollPosition={ddpState.current.scrollPosition}
+                            scale={ddpState.current.scale}
+                            highlightedNotes={[ddpState.current.questionOrder[ddpState.current.currentQuestionIndex]]}
+                            correctNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => val.isCorrect).map(([key]) => key)}
+                            incorrectNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => !val.isCorrect).map(([key]) => key)}
+                            noteLabels={Object.fromEntries(Array.from(ddpState.current.answeredNotes.entries()).map(([key, val]) => [key, val.degree]))}
+                        />
+                    ) : (
+                        <Fretboard 
+                            instrument={settings.instrument}
+                            handedness={settings.handedness}
+                            onNotePlayed={() => {}}
+                            isEndless={true}
+                            scrollPosition={ddpState.current.scrollPosition}
+                            scale={ddpState.current.scale}
+                            labelMode="degrees"
+                            highlightedNotes={[ddpState.current.questionOrder[ddpState.current.currentQuestionIndex]]}
+                            correctNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => val.isCorrect).map(([key]) => key)}
+                            incorrectNotes={Array.from(ddpState.current.answeredNotes.entries()).filter(([,val]) => !val.isCorrect).map(([key]) => key)}
+                            noteLabels={Object.fromEntries(Array.from(ddpState.current.answeredNotes.entries()).map(([key, val]) => [key, val.degree]))}
+                        />
+                    )}
+                </div>
+                <DegreeSelector onSelect={handleDegreeDashProSelect} />
+            </div>
         ) : (
             <div className="drill-layout flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 min-h-0 mt-2 sm:mt-4">
             
-            <div className="instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 lg:order-1 overflow-hidden rounded-lg">
-                {quizPhase === 'active' && !isEducationalMode && <WarpSpeedBackground bpm={effectiveBpm} />}
+            <div className="instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 lg:order-1 rounded-lg">
+                {quizPhase === 'active' && !isEducationalMode && (
+                    <div className="absolute inset-0 rounded-lg overflow-hidden">
+                        <WarpSpeedBackground bpm={effectiveBpm} />
+                    </div>
+                )}
                 <div className="relative z-10 w-full flex-1 flex items-center justify-center">
                     {!isGalaxyConstructorMode ? renderedInstrument : <div></div>}
                 </div>

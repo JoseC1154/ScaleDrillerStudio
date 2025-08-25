@@ -15,6 +15,12 @@ export type DeviceType = 'mobile' | 'desktop';
 export type NoteDiscoveryRound = 1 | 2 | 3 | 4 | 5;
 export type QuizPhase = 'loading' | 'info' | 'countdown' | 'active' | 'animation' | 'intermission' | 'pre-round-animation';
 
+export interface KeyTheme {
+  background: string;
+  foreground: string;
+  accent: string;
+}
+
 export interface DrillSettings {
   level: number;
   key: Key;

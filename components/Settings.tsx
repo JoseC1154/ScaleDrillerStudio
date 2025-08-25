@@ -102,7 +102,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSettingChange, o
         case 'Degree Dash':
             return { title: 'Degree Dash', description: "True scale mastery! Note names are hidden. Complete 5 rounds of filling in the scale degrees, with fewer hints each time. The final round is a 50-beat timed challenge!", rules: { totalBeats: 50, beatPenalty: 5 } };
         case 'Degree Dash Pro':
-            return { title: 'Degree Dash Pro', description: "The ultimate test of scale knowledge. Same as Degree Dash, but with no hints provided from the start. Good luck!", rules: { totalBeats: 50, beatPenalty: 5 } };
+            return { title: 'Degree Dash Pro', description: "An endless survival challenge. The instrument scrolls continuously. Identify the scale degree of passing notes before they disappear off-screen. Survive as long as you can!", rules: { totalBeats: 50, bpm: 60, beatAward: 2, beatPenalty: 5 } };
         case 'Key Notes':
             return { title: 'Key Notes', description: 'A fast-paced drill. Find all notes in 40 random scales before your beats run out.', rules: { totalBeats: 50, bpm: 70, beatAward: 5, beatPenalty: 5 } };
         case 'Scale Detective':
@@ -129,7 +129,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSettingChange, o
 
     const { title, description, rules } = getDrillDescription(settings.drillMode);
 
-    const showPracticeOptions = ['Practice', 'Degree Training', 'Intervals', 'Chord Builder', 'Nashville Numbers', 'Galaxy Constructor', 'ScaleSweeper', 'Degree Dash', 'Degree Dash Pro'].includes(settings.drillMode);
+    const showPracticeOptions = ['Practice', 'Degree Training', 'Intervals', 'Chord Builder', 'Nashville Numbers', 'Galaxy Constructor', 'ScaleSweeper', 'Degree Dash'].includes(settings.drillMode);
     
     return (
         <div className="space-y-4">
@@ -160,10 +160,15 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSettingChange, o
                     </div>
                     )}
                     
-                    {['Practice', 'Degree Training', 'Galaxy Constructor', 'ScaleSweeper', 'Degree Dash', 'Degree Dash Pro'].includes(settings.drillMode) && (
+                    {['Practice', 'Degree Training', 'Galaxy Constructor', 'ScaleSweeper', 'Degree Dash'].includes(settings.drillMode) && (
                     <div>
                         <label htmlFor="scale" className="block text-sm font-medium text-stone-300 mb-2">Scale Type</label>
-                        <select id="scale" value={settings.scaleType} onChange={e => handleSettingChange('scaleType', e.target.value as DrillSettings['scaleType'])} className="w-full bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-white focus:ring-orange-500 focus:border-orange-500">
+                        <select 
+                            id="scale" 
+                            value={settings.scaleType} 
+                            onChange={e => handleSettingChange('scaleType', e.target.value as DrillSettings['scaleType'])} 
+                            className="w-full bg-stone-800 border border-stone-700 rounded-md px-3 py-2 text-white focus:ring-orange-500 focus:border-orange-500"
+                        >
                         {SCALE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>

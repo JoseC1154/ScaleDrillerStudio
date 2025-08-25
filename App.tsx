@@ -1,8 +1,8 @@
 
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES } from './constants';
-import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView } from './types';
+import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES, DEFAULT_THEME, KEY_THEMES } from './constants';
+import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, KeyTheme, MusicKey } from './types';
 import { loadUserData, saveUserData, updatePerformanceStat } from './services/userData';
 import { Settings } from './components/Settings';
 import Drill from './components/Quiz';
@@ -46,6 +46,8 @@ const getDrillRules = (mode: DrillMode): Partial<DrillSettingsType> => {
     case 'Degree Dash':
       // This mode manages its own rounds and timing. Initial setup is for the non-timed rounds.
       return { ...baseRules, questionCount: 1, totalBeats: 999, bpm: 0, beatAward: 0, beatPenalty: 5 };
+    case 'Degree Dash Pro':
+      return { ...baseRules, totalBeats: 50, bpm: 60, beatAward: 2, beatPenalty: 5, questionCount: 1 };
     case 'Key Notes':
       // An endurance mode. More starting health, faster pace.
       return { ...baseRules, totalBeats: 50, bpm: 80 };
@@ -86,6 +88,7 @@ const App: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState(true);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<KeyTheme>(DEFAULT_THEME);
   const deviceType = useDevice();
 
   useEffect(() => {
@@ -117,6 +120,14 @@ const App: React.FC = () => {
   const handleDevModeToggle = useCallback(() => {
     setIsDevModeUnlocked(prev => !prev);
   }, []);
+  
+  const handleThemeChange = useCallback((key: MusicKey | null) => {
+    if (key && KEY_THEMES[key]) {
+      setActiveTheme(KEY_THEMES[key]);
+    } else {
+      setActiveTheme(DEFAULT_THEME);
+    }
+  }, []);
 
   const handleStartDrill = useCallback(() => {
     if (!userData || isTutorialActive) return;
@@ -147,7 +158,8 @@ const App: React.FC = () => {
 
   const handleQuit = useCallback(() => {
     setAppState('settings');
-  }, []);
+    handleThemeChange(null);
+  }, [handleThemeChange]);
 
   const handleFullScreenToggle = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -278,7 +290,7 @@ const App: React.FC = () => {
 
     switch (appState) {
       case 'drill':
-        return <Drill settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} />;
+        return <Drill settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} onThemeChange={handleThemeChange} />;
       case 'input_tester':
         return <InputTester settings={settings} onQuit={handleQuit} onSettingChange={handleSettingChange} />;
       case 'settings':
@@ -290,7 +302,7 @@ const App: React.FC = () => {
   const showHeader = appState === 'settings' && activeView === 'drill';
 
   return (
-    <div className="text-stone-100 h-screen w-screen flex flex-col">
+    <div className={`text-stone-100 h-screen w-screen flex flex-col bg-gradient-to-br ${activeTheme.background} transition-colors duration-1000 ease-in-out`}>
       <div className="flex-1 flex flex-col min-w-0 min-h-0 pt-[env(safe-area-inset-top)]">
         {/* TOP BAR */}
         <header className="app-header w-full flex items-center justify-between p-2 sm:p-4 flex-shrink-0">

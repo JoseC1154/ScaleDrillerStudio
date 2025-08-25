@@ -46,6 +46,17 @@ const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingCh
     // Empty array means random keys will be used, which is the desired default.
     onSettingChange('practiceKeys', newKeys);
   };
+  
+  const INFINITE_QUESTIONS_VALUE = 10000;
+  const SLIDER_MAX = 101;
+
+  const handleQuestionCountChange = (sliderValue: number) => {
+      const newValue = sliderValue >= SLIDER_MAX ? INFINITE_QUESTIONS_VALUE : sliderValue;
+      onSettingChange('questionCount', newValue);
+  };
+
+  const questionCountDisplay = settings.questionCount >= INFINITE_QUESTIONS_VALUE ? 'Infinite' : settings.questionCount;
+  const questionCountSliderValue = settings.questionCount >= INFINITE_QUESTIONS_VALUE ? SLIDER_MAX : settings.questionCount;
 
   return (
     <div className="p-4 space-y-4">
@@ -56,13 +67,20 @@ const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingCh
           max={200}
           onChange={(v) => onSettingChange('bpm', v)}
         />
-        <SliderControl
-          label="Question Count"
-          value={settings.questionCount}
-          min={1}
-          max={100}
-          onChange={(v) => onSettingChange('questionCount', v)}
-        />
+        <div>
+          <label className="block text-sm font-medium text-stone-300 mb-1 flex justify-between">
+            <span>Question Count</span>
+            <span className="font-bold text-orange-400">{questionCountDisplay}</span>
+          </label>
+          <input
+            type="range"
+            min={1}
+            max={SLIDER_MAX}
+            value={questionCountSliderValue}
+            onChange={e => handleQuestionCountChange(parseInt(e.target.value, 10))}
+            className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+          />
+        </div>
         <SliderControl
           label="Starting Beats"
           value={settings.totalBeats}

@@ -10,7 +10,7 @@ interface PianoProps {
   onNotePlayed: (note: string, event?: React.MouseEvent) => void;
   highlightedNotes?: string[];
   correctNotes?: string[];
-  incorrectNote?: string | null;
+  incorrectNotes?: string[];
   labelMode?: 'notes' | 'degrees';
   scale?: Scale | null;
   noteLabels?: { [uniqueId: string]: string | number };
@@ -23,12 +23,15 @@ interface PianoProps {
   drillMode?: DrillMode;
   quizPhase?: QuizPhase;
   animatingSacrifice?: Set<Note>;
+  keyRefCallback?: (refs: Record<string, HTMLDivElement | null>) => void;
+  isEndless?: boolean;
+  scrollPosition?: number;
 }
 
 const START_MIDI_NOTE = 24; // Start from C1
-const NUMBER_OF_KEYS = 61; // 5 octaves
+const DEFAULT_NUMBER_OF_KEYS = 61; // 5 octaves
 
-const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], correctNotes = [], incorrectNote = null, labelMode = 'notes', scale = null, noteLabels, disabledNotes, activeNotes, justRevealedNotes, liveVolume, mineNotes = [], revealedNoteNames, drillMode, quizPhase, animatingSacrifice }) => {
+const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], correctNotes = [], incorrectNotes = [], labelMode = 'notes', scale = null, noteLabels, disabledNotes, activeNotes, justRevealedNotes, liveVolume, mineNotes = [], revealedNoteNames, drillMode, quizPhase, animatingSacrifice, keyRefCallback, isEndless = false, scrollPosition = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const keyRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -43,7 +46,35 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], corr
     }
   }, []);
 
+  const pianoKeys = useMemo(() => {
+    const keys: { note: Note; octave: number; uniqueKey: string }[] = [];
+    const numberOfKeys = isEndless ? 120 : DEFAULT_NUMBER_OF_KEYS;
+    for (let i = 0; i < numberOfKeys; i++) {
+        const midiNumber = START_MIDI_NOTE + i;
+        if (!isEndless && midiNumber > 108) break; // C8 is MIDI 108
+        const note = ALL_NOTES[midiNumber % 12];
+        const octave = Math.floor(midiNumber / 12) - 1;
+        keys.push({
+            note,
+            octave,
+            uniqueKey: `${note}${octave}`,
+        });
+    }
+    return keys;
+  }, [isEndless]);
+
+  // When keys are rendered, report the refs up to the parent
   useEffect(() => {
+    if (keyRefCallback) {
+        // A timeout ensures all refs are populated after the render cycle
+        const timer = setTimeout(() => keyRefCallback(keyRefs.current), 0);
+        return () => clearTimeout(timer);
+    }
+  }, [keyRefCallback, pianoKeys]);
+
+
+  useEffect(() => {
+    if (isEndless) return;
     const el = containerRef.current;
     if (el) {
       checkScroll();
@@ -56,23 +87,7 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], corr
         resizeObserver.unobserve(el);
       };
     }
-  }, [checkScroll]);
-
-  const pianoKeys = useMemo(() => {
-    const keys: { note: Note; octave: number; uniqueKey: string }[] = [];
-    for (let i = 0; i < NUMBER_OF_KEYS; i++) {
-        const midiNumber = START_MIDI_NOTE + i;
-        if (midiNumber > 108) break; // C8 is MIDI 108
-        const note = ALL_NOTES[midiNumber % 12];
-        const octave = Math.floor(midiNumber / 12) - 1;
-        keys.push({
-            note,
-            octave,
-            uniqueKey: `${note}${octave}`,
-        });
-    }
-    return keys;
-  }, []);
+  }, [checkScroll, isEndless]);
 
   const { correctUniqueIds, correctNoteNames } = useMemo(() => {
     const uniqueIds = new Set<string>();
@@ -103,17 +118,18 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], corr
   
   return (
     <div className="relative w-full">
-       {canScrollLeft && (
+       {!isEndless && canScrollLeft && (
         <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center bg-gradient-to-r from-stone-900 via-stone-900/70 to-transparent pointer-events-none w-12 transition-opacity duration-300">
           <ChevronLeftIcon className="h-8 w-8 text-white opacity-50" />
         </div>
       )}
       <div className="flex justify-center w-full">
-        <div ref={containerRef} className="p-4 bg-stone-900/70 backdrop-blur-lg rounded-lg overflow-x-auto">
-          <div className="flex flex-nowrap min-w-max">
+        <div ref={containerRef} className={`p-4 bg-stone-900/70 backdrop-blur-lg rounded-lg ${!isEndless ? 'overflow-x-auto' : 'overflow-hidden'}`}>
+          <div className="flex flex-nowrap min-w-max" style={{ transform: isEndless ? `translateX(${scrollPosition}px)` : undefined, transition: isEndless ? 'transform 0.05s linear' : undefined }}>
             {pianoKeys.map(({ note, octave, uniqueKey }) => {
               const isCorrect = correctUniqueIds.has(uniqueKey) || correctNoteNames.has(note);
               const isHighlighted = highlightedUniqueIds.has(uniqueKey) || highlightedNoteNames.has(note);
+              const isIncorrect = incorrectNotes.includes(uniqueKey);
               const isActive = activeNotes ? activeNotes.includes(uniqueKey) : true;
               const isJustRevealed = justRevealedNotes?.includes(uniqueKey);
               const isMine = mineNotes.includes(uniqueKey);
@@ -128,7 +144,7 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], corr
                   isBlack={note.includes('b') || note.includes('#')}
                   isHighlighted={isHighlighted}
                   isCorrect={isCorrect}
-                  isIncorrect={incorrectNote === uniqueKey}
+                  isIncorrect={isIncorrect}
                   onClick={(note, e) => onNotePlayed(note, e)}
                   octave={octave}
                   labelMode={labelMode}
@@ -150,7 +166,7 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [], corr
           </div>
         </div>
       </div>
-       {canScrollRight && (
+       {!isEndless && canScrollRight && (
          <div className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center bg-gradient-to-l from-stone-900 via-stone-900/70 to-transparent pointer-events-none w-12 transition-opacity duration-300">
           <ChevronRightIcon className="h-8 w-8 text-white opacity-50" />
         </div>

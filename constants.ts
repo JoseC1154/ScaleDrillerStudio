@@ -1,5 +1,6 @@
 
-import { Note, Key, MusicKey, ScaleType, DrillSettings, DrillMode, TuningNote, TuningPreset } from './types';
+
+import { Note, Key, MusicKey, ScaleType, DrillSettings, DrillMode, TuningNote, TuningPreset, KeyTheme } from './types';
 
 export const ALL_NOTES: Note[] = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -131,7 +132,7 @@ export const LEVEL_MODES: { [level: number]: { mode: DrillMode, name: string }[]
     { mode: 'Intervals', name: 'Intervals' }, 
     { mode: 'Chord Builder', name: 'Chords' },
     { mode: 'ScaleSweeper', name: 'Scale Sweeper' },
-    { mode: 'Degree Dash Pro', name: 'Degree Dash Pro' }
+    { mode: 'Degree Dash Pro', name: 'Degree Dash Pro' },
   ],
   4: [
     { mode: 'Randomizer Roulette', name: 'Roulette' }
@@ -162,3 +163,25 @@ export const TUNING_PRESETS: TuningPreset[] = [
     { name: 'Guitar Standard', notes: GUITAR_STANDARD_TUNING_NOTES },
     { name: 'Bass Standard', notes: BASS_STANDARD_TUNING_NOTES },
 ];
+
+// --- Global Theming ---
+export const DEFAULT_THEME: KeyTheme = {
+    background: 'from-stone-800/80 to-stone-900/90',
+    foreground: 'text-stone-200',
+    accent: 'text-orange-400',
+};
+
+export const KEY_THEMES: Record<MusicKey, KeyTheme> = {
+    'C':  { background: 'from-white/20 to-yellow-100/20', foreground: 'text-stone-100', accent: 'text-yellow-400' },
+    'G':  { background: 'from-orange-500/20 to-orange-300/20', foreground: 'text-stone-100', accent: 'text-orange-300' },
+    'D':  { background: 'from-sky-500/20 to-sky-300/20', foreground: 'text-stone-100', accent: 'text-sky-300' },
+    'A':  { background: 'from-red-600/20 to-red-400/20', foreground: 'text-stone-100', accent: 'text-red-400' },
+    'E':  { background: 'from-purple-600/20 to-purple-400/20', foreground: 'text-stone-100', accent: 'text-purple-400' },
+    'B':  { background: 'from-emerald-500/20 to-emerald-300/20', foreground: 'text-stone-100', accent: 'text-emerald-300' },
+    'F#': { background: 'from-pink-500/20 to-pink-300/20', foreground: 'text-stone-100', accent: 'text-pink-300' },
+    'Db': { background: 'from-slate-400/20 to-slate-200/20', foreground: 'text-stone-100', accent: 'text-slate-300' },
+    'Ab': { background: 'from-indigo-600/20 to-indigo-400/20', foreground: 'text-stone-100', accent: 'text-indigo-400' },
+    'Eb': { background: 'from-amber-500/20 to-amber-300/20', foreground: 'text-stone-100', accent: 'text-amber-300' },
+    'Bb': { background: 'from-blue-700/20 to-blue-500/20', foreground: 'text-stone-100', accent: 'text-blue-400' },
+    'F':  { background: 'from-green-700/20 to-green-500/20', foreground: 'text-stone-100', accent: 'text-green-400' },
+};

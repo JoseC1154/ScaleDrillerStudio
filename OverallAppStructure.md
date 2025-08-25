@@ -40,6 +40,10 @@
 ### Chord Builder
 *   **Objective:** Given a root note and chord type (Major or Minor), find all three notes that form the chord.
 
+### Degree Dash Pro
+*   **Objective:** An endless arcade survival challenge. The instrument scrolls continuously, and you must correctly identify the scale degree of passing notes before they disappear off-screen.
+*   **Gameplay:** Survive as long as you can as the scrolling speed increases and the musical key changes dynamically. Wrong answers or missed notes drain your "Beat Meter." The game ends when the meter is empty. This mode teaches rapid degree recognition and builds a subconscious association between keys and their unique color themes.
+
 ### ScaleSweeper (Gatekeeper)
 *   **Objective:** A musical minesweeper! The root note is revealed. Uncover all 7 scale notes to win, but watch out for 'mines' (incorrect notes).
 *   **To Level Up:** Complete this drill to unlock Level 4.

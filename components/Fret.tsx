@@ -52,9 +52,9 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
     let stateClasses = ``;
 
     if (isPlaceholder) {
-        stateClasses = 'bg-transparent text-transparent hover:bg-white/10';
+        stateClasses = 'bg-transparent text-transparent group-hover:bg-white/10';
     } else {
-        stateClasses = `bg-transparent text-stone-400 hover:bg-white/20 hover:text-white`;
+        stateClasses = `bg-transparent text-stone-400 group-hover:bg-white/20 group-hover:text-white`;
     }
 
     // Override with specific states
@@ -105,7 +105,11 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
     }
 
     return (
-        <div className="relative flex-1 flex items-center justify-center h-10 sm:h-12">
+        <div 
+          className="relative flex-1 flex items-center justify-center h-10 sm:h-12 group"
+          onClick={(e) => !isDisabled && onClick(e)}
+          style={!isDisabled ? { cursor: 'pointer' } : {}}
+        >
             {/* Inlays */}
             {showInlay && !isDoubleMarkerFret && (
                 <div className="absolute w-2 h-2 sm:w-2.5 sm:h-2.5 bg-gray-200 bg-opacity-40 rounded-full z-0"></div>
@@ -121,10 +125,10 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
             <button
                 ref={ref}
                 id={`fret-${uniqueFretId}`}
-                onClick={(e) => !isDisabled && onClick(e)}
                 aria-label={`Play note ${note}`}
-                className={`${baseClasses} ${stateClasses}`}
+                className={`${baseClasses} ${stateClasses} pointer-events-none`}
                 style={fretStyle}
+                tabIndex={-1}
             >
               <span className={labelAnimationClass}>
                 {isMine ? <XMarkIcon className="h-5 w-5" /> : (shouldShowContent && displayLabel)}
