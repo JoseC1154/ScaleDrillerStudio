@@ -1,7 +1,6 @@
 
-
-import React, { useMemo, useState, useEffect, memo, forwardRef } from 'react';
-import { Note, Handedness, Scale, DrillMode, QuizPhase } from '../types';
+import React, { useState, useEffect, memo, forwardRef } from 'react';
+import { Note, Scale, DrillMode, QuizPhase } from '../types';
 import { XMarkIcon } from './Icons';
 
 interface FretProps {
@@ -24,11 +23,16 @@ interface FretProps {
     drillMode?: DrillMode;
     quizPhase?: QuizPhase;
     isSacrificed?: boolean;
+    size?: 'default' | 'small' | 'compact';
+    dimUnfocusedNotes?: boolean;
+    colors?: string[];
 }
 
-const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFretId, isHighlighted, isCorrect, isIncorrect, onClick, showInlay, labelMode, scale, customLabel, isDisabled, liveVolume, isMine, isActive = true, isRevealed, drillMode, quizPhase, isSacrificed }, ref) => {
+const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFretId, isHighlighted, isCorrect, isIncorrect, onClick, showInlay, labelMode, scale, customLabel, isDisabled, liveVolume, isMine, isActive = true, isRevealed, drillMode, quizPhase, isSacrificed, size = 'default', dimUnfocusedNotes = false, colors }, ref) => {
     const [isFlashing, setIsFlashing] = useState(false);
     const isPlaceholder = !isActive;
+    const isSmall = size === 'small';
+    const isCompact = size === 'compact';
     
     useEffect(() => {
         if (isIncorrect) {
@@ -44,32 +48,20 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
         }
     }, [isIncorrect]);
     
-    const isDoubleMarkerFret = fretNum === 12;
+    const isDoubleMarkerFret = fretNum === 12 || fretNum === 24;
     const fretStyle: React.CSSProperties = {};
     const useLiveGlow = isHighlighted && !isCorrect && !isFlashing && liveVolume !== undefined;
 
-    const baseClasses = 'w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-150 z-10';
+    const baseClasses = `
+        ${isCompact ? 'w-4 h-4 sm:w-5 sm:h-5' : isSmall ? 'w-5 h-5 sm:w-6 sm:h-6' : 'w-7 h-7 sm:w-8 sm:h-8'}
+        rounded-full flex items-center justify-center 
+        ${isCompact ? 'text-[9px]' : isSmall ? 'text-xs' : 'text-sm'}
+        font-semibold transition-all duration-150 z-10
+    `;
     let stateClasses = ``;
-
-    if (isPlaceholder) {
-        stateClasses = 'bg-transparent text-transparent group-hover:bg-white/10';
-    } else {
-        stateClasses = `bg-transparent text-stone-400 group-hover:bg-white/20 group-hover:text-white`;
-    }
-
-    // Override with specific states
-    if (isMine) {
-        stateClasses = '!bg-red-500 !text-white ring-2 ring-white transform scale-105';
-    } else if (isCorrect) {
-        stateClasses = '!bg-green-400 !text-black ring-2 ring-white transform scale-105';
-    } else if (isFlashing) {
-        stateClasses = '!bg-red-500 !text-black ring-2 ring-white transform scale-105';
-    } else if (isHighlighted && !useLiveGlow) {
-        stateClasses = '!bg-orange-400 !text-black shadow-lg transform scale-105 ring-2 ring-orange-600';
-    } else if (isRevealed) {
-        stateClasses = '!bg-sky-700 !text-white shadow-sm';
-    }
-
+    const isMultiColor = colors && colors.length > 0;
+    const isAnyActiveState = isMine || isCorrect || isFlashing || isHighlighted || isMultiColor;
+    const isDimmed = dimUnfocusedNotes && !isAnyActiveState && !isRevealed;
 
     if (useLiveGlow && liveVolume !== undefined) {
         const brightness = Math.max(0.1, liveVolume);
@@ -82,11 +74,39 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
         fretStyle.transition = 'all 50ms ease-out';
     }
 
+    // State Priority: Mine > Correct > Flashing > Multi-Color > Highlighted > Revealed > Dimmed > Placeholder > Default
+    if (isMine) {
+        stateClasses = '!bg-red-500 !text-white ring-2 ring-white transform scale-105';
+    } else if (isCorrect) {
+        stateClasses = '!bg-green-400 !text-black ring-2 ring-white transform scale-105';
+    } else if (isFlashing) {
+        stateClasses = '!bg-red-500 !text-black ring-2 ring-white transform scale-105';
+    } else if (isMultiColor) {
+        stateClasses = '!text-black shadow-lg transform scale-105 ring-2 ring-white/80';
+        if (colors.length === 1) {
+            fretStyle.backgroundColor = colors[0];
+        } else {
+            const step = 100 / colors.length;
+            const gradient = colors.map((color, i) => `${color} ${i * step}% ${(i + 1) * step}%`).join(', ');
+            fretStyle.background = `conic-gradient(from 90deg, ${gradient})`;
+        }
+    } else if (isHighlighted && !useLiveGlow) {
+        stateClasses = '!bg-orange-400 !text-black shadow-lg transform scale-105 ring-2 ring-orange-600';
+    } else if (isRevealed) {
+        stateClasses = '!bg-sky-700 !text-white shadow-sm';
+    } else if (isDimmed) {
+        stateClasses = 'bg-transparent text-transparent opacity-40';
+    } else if (isPlaceholder) {
+        stateClasses = 'bg-transparent text-transparent hover:bg-white/10';
+    } else {
+        stateClasses = `bg-transparent text-stone-400 hover:bg-white/20 hover:text-white`;
+    }
+
 
     if (isDisabled) {
         stateClasses += ' opacity-30 !cursor-not-allowed';
     }
-
+    
     let displayLabel: string | number = customLabel || note;
     if (labelMode === 'degrees' && scale && !customLabel) {
         const degreeIndex = scale.notes.indexOf(note);
@@ -104,20 +124,21 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
         shouldShowContent = !!isRevealed || !!customLabel;
     }
 
+    const singleInlayClasses = `absolute bg-gray-200 bg-opacity-40 rounded-full z-0 ${isSmall ? 'w-1.5 h-1.5 sm:w-2 sm:h-2' : 'w-2 h-2 sm:w-2.5 sm:h-2.5'}`;
+    const doubleInlayTopClasses = `absolute bg-gray-200 bg-opacity-40 rounded-full z-0 ${isSmall ? '-translate-y-2 w-1.5 h-1.5 sm:-translate-y-2.5 sm:w-2 sm:h-2' : '-translate-y-3 w-2 h-2 sm:w-2.5 sm:h-2.5'}`;
+    const doubleInlayBottomClasses = `absolute bg-gray-200 bg-opacity-40 rounded-full z-0 ${isSmall ? 'translate-y-2 w-1.5 h-1.5 sm:translate-y-2.5 sm:w-2 sm:h-2' : 'translate-y-3 w-2 h-2 sm:w-2.5 sm:h-2.5'}`;
+
+
     return (
-        <div 
-          className="relative flex-1 flex items-center justify-center h-10 sm:h-12 group"
-          onClick={(e) => !isDisabled && onClick(e)}
-          style={!isDisabled ? { cursor: 'pointer' } : {}}
-        >
+        <div className="relative flex-1 flex items-center justify-center h-full">
             {/* Inlays */}
             {showInlay && !isDoubleMarkerFret && (
-                <div className="absolute w-2 h-2 sm:w-2.5 sm:h-2.5 bg-gray-200 bg-opacity-40 rounded-full z-0"></div>
+                <div className={singleInlayClasses}></div>
             )}
             {showInlay && isDoubleMarkerFret && (
                 <>
-                    <div className="absolute -translate-y-3 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-gray-200 bg-opacity-40 rounded-full z-0"></div>
-                    <div className="absolute translate-y-3 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-gray-200 bg-opacity-40 rounded-full z-0"></div>
+                    <div className={doubleInlayTopClasses}></div>
+                    <div className={doubleInlayBottomClasses}></div>
                 </>
             )}
 
@@ -125,13 +146,13 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
             <button
                 ref={ref}
                 id={`fret-${uniqueFretId}`}
+                onClick={(e) => !isDisabled && onClick(e)}
                 aria-label={`Play note ${note}`}
-                className={`${baseClasses} ${stateClasses} pointer-events-none`}
+                className={`${baseClasses} ${stateClasses}`}
                 style={fretStyle}
-                tabIndex={-1}
             >
               <span className={labelAnimationClass}>
-                {isMine ? <XMarkIcon className="h-5 w-5" /> : (shouldShowContent && displayLabel)}
+                {isMine ? <XMarkIcon className={isSmall ? 'h-4 w-4' : 'h-5 w-5'} /> : (shouldShowContent && displayLabel)}
               </span>
             </button>
         </div>

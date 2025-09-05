@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DeviceType } from '../types.ts';
+import { DeviceType } from '../types';
 
 /**
  * A hook to detect whether the user is on a mobile or desktop device.

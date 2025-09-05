@@ -6,24 +6,32 @@
     <title>Scale Driller</title>
 
     <!-- PWA Manifest & Theme -->
-    <link rel="manifest" href="./manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#f97316" />
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjZjk3MzE2Ij48cGF0aCBkPSJNMTIgM3YxMC41NWMtLjU5LS4zNC0xLjI3LS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==" />
     
-    <!-- PWA -->
-    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Scale Driller" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQPSJNMTIgM3YxMC41NWMtLjU5LS4zNC0xLjI3LS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg==" />
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-  </head>
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg+" />
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "vite": "https://aistudiocdn.com/vite@^7.1.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2",
+    "@tailwindcss/vite": "https://aistudiocdn.com/@tailwindcss/vite@^4.1.12",
+    "tailwindcss": "https://aistudiocdn.com/tailwindcss@^4.1.12"
+  }
+}
+</script>
+</head>
   <body>
     <div id="root" class="h-full w-full"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

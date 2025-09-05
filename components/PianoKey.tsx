@@ -1,6 +1,5 @@
 
-
-import React, { useMemo, useRef, useState, useEffect, memo, forwardRef } from 'react';
+import React, { useState, useEffect, memo, forwardRef } from 'react';
 import { Note, Scale, DrillMode, QuizPhase } from '../types';
 import { XMarkIcon } from './Icons';
 
@@ -8,7 +7,6 @@ interface PianoKeyProps {
   note: Note;
   isBlack: boolean;
   isHighlighted: boolean;
-
   isCorrect: boolean;
   isIncorrect: boolean;
   onClick: (note: string, event: React.MouseEvent) => void;
@@ -26,11 +24,16 @@ interface PianoKeyProps {
   drillMode?: DrillMode;
   quizPhase?: QuizPhase;
   isSacrificed?: boolean;
+  size?: 'default' | 'small' | 'compact';
+  dimUnfocusedNotes?: boolean;
+  colors?: string[];
 }
 
-const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isHighlighted, isCorrect, isIncorrect, onClick, octave, labelMode, scale, uniqueKey, customLabel, isDisabled, isActive = true, isJustRevealed, liveVolume, isMine, isRevealed, drillMode, quizPhase, isSacrificed }, ref) => {
+const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isHighlighted, isCorrect, isIncorrect, onClick, octave, labelMode, scale, uniqueKey, customLabel, isDisabled, isActive = true, isJustRevealed, liveVolume, isMine, isRevealed, drillMode, quizPhase, isSacrificed, size = 'default', dimUnfocusedNotes = false, colors }, ref) => {
   const [isFlashing, setIsFlashing] = useState(false);
   const isPlaceholder = !isActive;
+  const isSmall = size === 'small';
+  const isCompact = size === 'compact';
 
   useEffect(() => {
     if (isIncorrect) {
@@ -48,7 +51,7 @@ const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isH
 
   const useLiveGlowEffect = isHighlighted && liveVolume !== undefined && !isCorrect && !isIncorrect;
   const keyStyle: React.CSSProperties = {};
-
+  
   if (useLiveGlowEffect && liveVolume !== undefined) {
       const brightness = Math.max(0.1, liveVolume);
       const lightness = 25 + (brightness * 30);
@@ -60,27 +63,53 @@ const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isH
       keyStyle.transition = 'all 50ms ease-out';
   }
 
+  const hasMultiColor = colors && colors.length > 0;
+  if (hasMultiColor) {
+      if (colors.length === 1) {
+          keyStyle.backgroundColor = colors[0];
+      } else {
+          const step = 100 / colors.length;
+          const gradient = colors.map((color, i) => `${color} ${i * step}% ${(i + 1) * step}%`).join(', ');
+          keyStyle.background = `conic-gradient(from 90deg, ${gradient})`;
+      }
+  }
+  
+  const isAnyActiveState = isMine || isCorrect || isFlashing || (!useLiveGlowEffect && isHighlighted) || hasMultiColor;
+  const isDimmed = dimUnfocusedNotes && !isAnyActiveState && !isRevealed;
+
+  let baseClassOverride = '';
+  if (isMine) baseClassOverride = '!bg-red-500 text-white';
+  else if (isCorrect) baseClassOverride = '!bg-green-300 text-black';
+  else if (isFlashing) baseClassOverride = '!bg-red-400 text-black';
+  else if (hasMultiColor) baseClassOverride = 'text-black';
+  else if (!useLiveGlowEffect && isHighlighted) baseClassOverride = '!bg-orange-400 text-black';
+  else if (isRevealed) baseClassOverride = isBlack ? '!bg-sky-800 text-white' : '!bg-sky-200 text-black';
+  else if (isPlaceholder) baseClassOverride = isBlack ? 'bg-stone-900 border border-black' : 'bg-black';
+  else baseClassOverride = isBlack ? 'bg-gray-800 text-white border border-black' : 'bg-gray-100 text-black';
+
+
   const keyClasses = [
-    'relative', 'border-stone-800', 'transition-all', 'duration-100', 'flex', 'items-end', 'justify-center', 'pb-2',
-    isBlack ? 'h-28 w-7 -ml-3.5 -mr-3.5 z-10 rounded-b-md' : 'h-48 w-12',
+    'relative', 'transition-all', 'duration-100', 'flex', 'items-end', 'justify-center', 'border', 'rounded-b-md',
+    isCompact ? 'pb-1' : (isSmall ? 'pb-1' : 'pb-2'),
+    isBlack 
+      ? (isCompact ? 'h-20 w-4 -ml-2 -mr-2 z-10' : (isSmall ? 'h-24 w-5 -ml-2.5 -mr-2.5 z-10' : 'h-36 w-7 -ml-3.5 -mr-3.5 z-10')) 
+      : (isCompact ? 'h-32 w-7' : (isSmall ? 'h-40 w-9' : 'h-48 w-12')),
     
+    // Consistent Outline for all active states
+    isAnyActiveState ? 'ring-1 sm:ring-2 ring-black/50' : '',
+
+    // Dimmed state for focus mode
+    isDimmed ? 'opacity-40' : '',
+
     // State Colors (highest priority)
-    isMine ? (isBlack ? '!bg-red-600 !border-red-700 text-white' : '!bg-red-500 !border-red-600 text-white')
-    : isCorrect ? (isBlack ? '!bg-green-400 !border-green-400 text-black' : '!bg-green-300 !border-green-300 text-black')
-    : isFlashing ? (isBlack ? '!bg-red-500 !border-red-500 text-black' : '!bg-red-400 !border-red-400 text-black')
-    : !useLiveGlowEffect && isHighlighted ? '!bg-orange-400 !border-orange-600 text-black'
-    : isRevealed ? (isBlack ? '!bg-sky-800 text-white' : '!bg-sky-200 text-black')
-    
-    // Base color
-    : isPlaceholder ? (isBlack ? 'bg-stone-900' : 'bg-black border border-stone-800')
-    : (isBlack ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black') + ' border',
+    baseClassOverride,
 
     // Interactivity
     isDisabled ? 'opacity-50 filter grayscale cursor-not-allowed' : 'cursor-pointer',
-    !isDisabled && (isPlaceholder ? 'hover:bg-stone-700' : (isBlack ? 'hover:bg-gray-700' : 'hover:bg-gray-200')),
+    !isAnyActiveState && (isPlaceholder ? 'hover:bg-stone-700' : (isBlack ? 'hover:bg-gray-700' : 'hover:bg-gray-200')),
 
     // Animation
-    isJustRevealed ? 'animate-key-appear' : ''
+    isJustRevealed ? 'animate-key-appear' : '',
   ].filter(Boolean).join(' ');
 
 
@@ -111,19 +140,26 @@ const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isH
     }
   }
 
+  const getFontSize = () => {
+    const labelLength = displayLabel.toString().length;
+    if (isCompact) return labelLength > 1 ? 'text-[8px]' : 'text-[10px]';
+    if (isSmall) return labelLength > 1 ? 'text-[10px]' : 'text-xs';
+    return labelLength > 1 ? 'text-xs' : 'text-sm';
+  }
+
   return (
     <div ref={ref} id={uniqueKey} className={keyClasses} style={keyStyle} onClick={(e) => !isDisabled && onClick(uniqueKey, e)}>
         {isMine ? (
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className={isCompact ? 'h-3 w-3' : (isSmall ? 'h-4 w-4' : 'h-5 w-5')} />
         ) : shouldShowLabel && (
           <div className={`flex flex-col items-center ${labelAnimationClass}`}>
-            <span className={`font-semibold ${displayLabel.toString().length > 1 ? 'text-xs' : 'text-sm'}`}>
+            <span className={`font-semibold ${getFontSize()}`}>
               {displayLabel === '❌' ? (
-                <XMarkIcon className="h-5 w-5 text-red-400" />
+                <XMarkIcon className={`text-red-400 ${isCompact ? 'h-3 w-3' : (isSmall ? 'h-4 w-4' : 'h-5 w-5')}`} />
               ) : displayLabel}
             </span>
             {showOctaveNumber && (
-              <span className={`text-[10px] mt-0.5 font-medium ${isHighlighted || isCorrect || isIncorrect ? 'text-black opacity-70' : 'text-gray-500'}`}>
+              <span className={`mt-0.5 font-medium ${isHighlighted || isCorrect || isIncorrect || hasMultiColor ? 'text-black opacity-70' : 'text-gray-500'} ${isCompact ? 'text-[7px]' : (isSmall ? 'text-[8px]' : 'text-[10px]')}`}>
                 C{octave}
               </span>
             )}

@@ -1,21 +1,20 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
-import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES, DEFAULT_THEME, KEY_THEMES } from './constants';
-import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, KeyTheme, MusicKey } from './types';
+import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES } from './constants';
+import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, InstanceState } from './types';
 import { loadUserData, saveUserData, updatePerformanceStat } from './services/userData';
 import { Settings } from './components/Settings';
-import { DrillComponent } from './components/Quiz';
+import Drill from './components/Quiz';
 import InputTester from './components/InputTester';
 import GlobalSettingsModal from './components/GlobalSettingsModal';
-import InputSelector from './components/InputSelector';
-import InstrumentSelector from './components/InstrumentSelector';
 import InfoModal from './components/InfoModal';
 import PerformanceModal from './components/PerformanceModal';
 import BottomNavBar from './components/BottomNavBar';
 import Tuner from './components/Tuner';
 import InteractiveGuide from './components/InteractiveGuide';
-import { SettingsIcon, EnterFullscreenIcon, ExitFullscreenIcon } from './components/Icons';
+import ChordWorkspace from './components/ChordWorkspace';
+import Dictionary from './components/Dictionary';
 import { useDevice } from './hooks/useDevice';
+import { getAudioContext } from './services/sound';
 
 type AppState = 'settings' | 'drill' | 'input_tester';
 
@@ -46,7 +45,8 @@ const getDrillRules = (mode: DrillMode): Partial<DrillSettingsType> => {
       // This mode manages its own rounds and timing. Initial setup is for the non-timed rounds.
       return { ...baseRules, questionCount: 1, totalBeats: 999, bpm: 0, beatAward: 0, beatPenalty: 5 };
     case 'Degree Dash Pro':
-      return { ...baseRules, totalBeats: 50, bpm: 60, beatAward: 2, beatPenalty: 5, questionCount: 1 };
+      // Same as Degree Dash, just without hints (handled in Quiz component).
+      return { ...baseRules, questionCount: 1, totalBeats: 999, bpm: 0, beatAward: 0, beatPenalty: 5 };
     case 'Key Notes':
       // An endurance mode. More starting health, faster pace.
       return { ...baseRules, totalBeats: 50, bpm: 80 };
@@ -56,6 +56,9 @@ const getDrillRules = (mode: DrillMode): Partial<DrillSettingsType> => {
     case 'ScaleSweeper':
       // Manages its own rounds/keys. High starting beats for the discovery phase.
       return { ...baseRules, questionCount: 1, totalBeats: 100, bpm: 90, beatAward: 5, beatPenalty: 10 };
+    case 'Randomizer Roulette':
+      // The L4 gatekeeper needs a fixed length to be completable.
+      return { ...baseRules, questionCount: 40, totalBeats: 40, bpm: 80 };
     case 'Time Attack':
       // A frantic, high-pressure start.
       return { ...baseRules, totalBeats: 20, bpm: 100 };
@@ -69,7 +72,6 @@ const getDrillRules = (mode: DrillMode): Partial<DrillSettingsType> => {
     case 'Degree Training':
     case 'Intervals':
     case 'Chord Builder':
-    case 'Randomizer Roulette':
     default:
       // Standard survival modes all share these balanced starting rules.
       return baseRules;
@@ -87,16 +89,32 @@ const App: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState(true);
   const [isTutorialActive, setIsTutorialActive] = useState(false);
-  const [activeTheme, setActiveTheme] = useState<KeyTheme>(DEFAULT_THEME);
+  const [selectedChordIds, setSelectedChordIds] = useState<string[]>([]);
+  const [instanceStates, setInstanceStates] = useState<Record<string, InstanceState>>({});
   const deviceType = useDevice();
 
   useEffect(() => {
     const loadedData = loadUserData();
     setUserData(loadedData);
-    // if (!loadedData.hasCompletedTutorial) {
-    //     // Use a small timeout to ensure the main UI has rendered before starting the tutorial
-    //     setTimeout(() => setIsTutorialActive(true), 500);
-    // }
+    // if (!loadedData.hasCompletedTutorial) { ... }
+  }, []);
+
+  // Effect to unlock audio context on first user interaction for mobile compatibility
+  useEffect(() => {
+    const unlockAudio = () => {
+      getAudioContext(); // This will create/resume the context
+      // This listener can stay to handle cases where the browser suspends audio again
+    };
+    
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
   }, []);
 
   // Add/remove class to body for drill-specific global styles (e.g., landscape layout)
@@ -119,14 +137,6 @@ const App: React.FC = () => {
   const handleDevModeToggle = useCallback(() => {
     setIsDevModeUnlocked(prev => !prev);
   }, []);
-  
-  const handleThemeChange = useCallback((key: MusicKey | null) => {
-    if (key && KEY_THEMES[key]) {
-      setActiveTheme(KEY_THEMES[key]);
-    } else {
-      setActiveTheme(DEFAULT_THEME);
-    }
-  }, []);
 
   const handleStartDrill = useCallback(() => {
     if (!userData || isTutorialActive) return;
@@ -148,6 +158,7 @@ const App: React.FC = () => {
 
   const handleStartInputTester = useCallback(() => {
     setAppState('input_tester');
+    setActiveView('drill');
   }, []);
 
   const handleStartInputTesterAndCloseModal = useCallback(() => {
@@ -157,8 +168,7 @@ const App: React.FC = () => {
 
   const handleQuit = useCallback(() => {
     setAppState('settings');
-    handleThemeChange(null);
-  }, [handleThemeChange]);
+  }, []);
 
   const handleFullScreenToggle = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -180,12 +190,26 @@ const App: React.FC = () => {
           return newData;
       });
   }, []);
+
+  const handleUserDataUpdate = useCallback((newUserData: UserData) => {
+    saveUserData(newUserData);
+    setUserData(newUserData);
+  }, []);
   
   const handleToggleSkipPreDrillInfo = useCallback((drillMode: DrillMode, skip: boolean) => {
     setUserData(prevData => {
         if (!prevData) return null;
         const newSeen = { ...prevData.preDrillInfoSeen, [drillMode]: skip };
         const newData = { ...prevData, preDrillInfoSeen: newSeen };
+        saveUserData(newData);
+        return newData;
+    });
+  }, []);
+
+  const handleToggleQuietMode = useCallback(() => {
+    setUserData(prevData => {
+        if (!prevData) return null;
+        const newData = { ...prevData, isQuietMode: !prevData.isQuietMode };
         saveUserData(newData);
         return newData;
     });
@@ -262,7 +286,7 @@ const App: React.FC = () => {
   const onViewChange = useCallback((view: ActiveView) => {
     setActiveView(currentView => {
         // When switching away from a modal view, return to the drill
-        if (currentView === 'report' || currentView === 'guide' || currentView === 'tuner') {
+        if (['report', 'guide', 'tuner', 'chord', 'dictionary'].includes(currentView)) {
             if (view === currentView) { // if tapping the active icon
                 return 'drill'; // go back to drill
             } else {
@@ -272,6 +296,11 @@ const App: React.FC = () => {
             return view;
         }
     });
+  }, []);
+
+  const handleMenuNavigation = useCallback((view: ActiveView) => {
+      setActiveView(view);
+      setIsGlobalSettingsOpen(false); // Close modal after navigation
   }, []);
 
   const handleStartTutorial = useCallback(() => {
@@ -289,9 +318,9 @@ const App: React.FC = () => {
 
     switch (appState) {
       case 'drill':
-        return <DrillComponent settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} onThemeChange={handleThemeChange} />;
+        return <Drill settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} isQuietMode={userData.isQuietMode} />;
       case 'input_tester':
-        return <InputTester settings={settings} onQuit={handleQuit} onSettingChange={handleSettingChange} />;
+        return <InputTester settings={settings} onQuit={handleQuit} onSettingChange={handleSettingChange} isQuietMode={userData.isQuietMode} />;
       case 'settings':
       default:
         return <Settings settings={settings} onSettingChange={handleSettingChange} onStartDrill={handleStartDrill} userData={userData} isDevModeUnlocked={isDevModeUnlocked} onDevModeToggle={handleDevModeToggle} />;
@@ -301,42 +330,12 @@ const App: React.FC = () => {
   const showHeader = appState === 'settings' && activeView === 'drill';
 
   return (
-    <div className={`text-stone-100 h-screen w-screen flex flex-col bg-gradient-to-br ${activeTheme.background} transition-colors duration-1000 ease-in-out`}>
+    <div className="text-stone-100 h-screen w-screen flex flex-col">
       <div className="flex-1 flex flex-col min-w-0 min-h-0 pt-[env(safe-area-inset-top)]">
-        {/* TOP BAR */}
-        <header className="app-header w-full flex items-center justify-between p-2 sm:p-4 flex-shrink-0">
-            <div className="flex items-center gap-2 z-10">
-                <InputSelector settings={settings} onSettingChange={handleSettingChange} />
-                <InstrumentSelector settings={settings} onSettingChange={handleSettingChange} />
-            </div>
-            <div className="flex items-center gap-2 z-10">
-                <button
-                onClick={() => setIsGlobalSettingsOpen(true)}
-                className="p-2 rounded-full bg-stone-900/60 hover:bg-stone-800/80 text-stone-200 transition-colors"
-                title="Settings"
-                aria-label="Open Settings"
-                >
-                  <SettingsIcon className="h-6 w-6" />
-                </button>
-                <button
-                onClick={handleFullScreenToggle}
-                className="p-2 rounded-full bg-stone-900/60 hover:bg-stone-800/80 text-stone-200 transition-colors"
-                title={isFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                aria-label={isFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                >
-                {isFullScreen ? (
-                    <ExitFullscreenIcon className="h-6 w-6" />
-                ) : (
-                    <EnterFullscreenIcon className="h-6 w-6" />
-                )}
-                </button>
-            </div>
-        </header>
-        
         {/* MAIN CONTENT */}
         <main className="flex-1 w-full overflow-y-auto px-2 sm:px-4 py-2 flex flex-col items-center">
           {showHeader && (
-              <header className="text-center mb-4 sm:mb-8 flex-shrink-0">
+              <header className="app-header text-center mb-4 sm:mb-8 flex-shrink-0 pt-8">
               <h1 className="text-4xl sm:text-5xl font-bold text-orange-400 tracking-tighter drop-shadow-lg">
                   Scale Driller
               </h1>
@@ -349,17 +348,35 @@ const App: React.FC = () => {
           <div className={`w-full flex-1 flex items-center justify-center min-h-0`}>
               {activeView === 'drill' && renderDrillContent()}
               {activeView === 'tuner' && <Tuner settings={settings} onSettingChange={handleSettingChange} />}
+              {activeView === 'chord' && userData && <ChordWorkspace 
+                  settings={settings} 
+                  userData={userData} 
+                  onUserDataUpdate={handleUserDataUpdate} 
+                  isQuietMode={userData.isQuietMode}
+                  selectedChordIds={selectedChordIds}
+                  setSelectedChordIds={setSelectedChordIds}
+                  instanceStates={instanceStates}
+                  setInstanceStates={setInstanceStates}
+              />}
+              {activeView === 'dictionary' && userData && <Dictionary userData={userData} onUserDataUpdate={handleUserDataUpdate} />}
           </div>
         </main>
       </div>
 
-      <BottomNavBar activeView={activeView} onViewChange={onViewChange} />
+      <BottomNavBar activeView={activeView} onViewChange={onViewChange} onMenuClick={() => setIsGlobalSettingsOpen(true)} id="tutorial-bottom-nav" />
 
       <GlobalSettingsModal
         isOpen={isGlobalSettingsOpen}
         onClose={() => setIsGlobalSettingsOpen(false)}
+        onNavigate={handleMenuNavigation}
         onStartInputTester={handleStartInputTesterAndCloseModal}
+        onToggleFullscreen={handleFullScreenToggle}
+        isFullScreen={isFullScreen}
         deviceType={deviceType}
+        settings={settings}
+        onSettingChange={handleSettingChange}
+        isQuietMode={userData?.isQuietMode ?? false}
+        onToggleQuietMode={handleToggleQuietMode}
       />
 
       {isTutorialActive && <InteractiveGuide onComplete={handleTutorialComplete} />}

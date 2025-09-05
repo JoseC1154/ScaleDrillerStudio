@@ -1,6 +1,6 @@
 
 
-import { Note, Key, MusicKey, ScaleType, DrillSettings, DrillMode, TuningNote, TuningPreset, KeyTheme } from './types';
+import { Note, Key, MusicKey, ScaleType, DrillSettings, DrillMode, TuningNote, TuningPreset, ChordTypeName, ChordDefinition } from './types';
 
 export const ALL_NOTES: Note[] = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -102,6 +102,64 @@ export const CHORD_FORMULAS: Record<'Major' | 'Minor', number[]> = {
     Minor: [0, 3, 7], // Root, Minor 3rd, Perfect 5th
 };
 
+export const CHORD_DEFINITIONS: Record<ChordTypeName, Omit<ChordDefinition, 'name'>> = {
+  // --- Dyads ---
+  'Power Chord': { symbol: '5', formula: [0, 7] },
+  'Perfect Fifth': { symbol: 'P5', formula: [0, 7] },
+  'Major Third Dyad': { symbol: 'M3', formula: [0, 4] },
+  'Minor Third Dyad': { symbol: 'm3', formula: [0, 3] },
+  
+  // --- Triads ---
+  'Major': { symbol: '', formula: [0, 4, 7] },
+  'Minor': { symbol: 'm', formula: [0, 3, 7] },
+  'Diminished': { symbol: 'dim', formula: [0, 3, 6] },
+  'Augmented': { symbol: 'aug', formula: [0, 4, 8] },
+  'Suspended 2': { symbol: 'sus2', formula: [0, 2, 7] },
+  'Suspended 4': { symbol: 'sus4', formula: [0, 5, 7] },
+  'Flat Five': { symbol: 'b5', formula: [0, 4, 6] },
+
+  // --- Sevenths ---
+  'Dominant 7th': { symbol: '7', formula: [0, 4, 7, 10] },
+  'Major 7th': { symbol: 'Maj7', formula: [0, 4, 7, 11] },
+  'Minor 7th': { symbol: 'm7', formula: [0, 3, 7, 10] },
+  'Minor Major 7th': { symbol: 'm(Maj7)', formula: [0, 3, 7, 11] },
+  'Diminished 7th': { symbol: 'dim7', formula: [0, 3, 6, 9] },
+  'Half-Diminished 7th': { symbol: 'm7b5', formula: [0, 3, 6, 10] },
+  'Augmented 7th': { symbol: 'aug7', formula: [0, 4, 8, 10] },
+  'Augmented Major 7th': { symbol: 'Maj7#5', formula: [0, 4, 8, 11] },
+  
+  // --- Added Tone ---
+  'Major 6th': { symbol: '6', formula: [0, 4, 7, 9] },
+  'Minor 6th': { symbol: 'm6', formula: [0, 3, 7, 9] },
+  'add2': { symbol: 'add2', formula: [0, 2, 4, 7] },
+  'add9': { symbol: 'add9', formula: [0, 4, 7, 14] },
+  'add11': { symbol: 'add11', formula: [0, 4, 7, 17] },
+  'Major 6th/9th': { symbol: '6/9', formula: [0, 4, 7, 9, 14] },
+
+  // --- Extended ---
+  'Dominant 9th': { symbol: '9', formula: [0, 4, 7, 10, 14] },
+  'Major 9th': { symbol: 'Maj9', formula: [0, 4, 7, 11, 14] },
+  'Minor 9th': { symbol: 'm9', formula: [0, 3, 7, 10, 14] },
+  'Dominant 11th': { symbol: '11', formula: [0, 4, 7, 10, 14, 17] },
+  'Major 11th': { symbol: 'Maj11', formula: [0, 4, 7, 11, 14, 17] },
+  'Minor 11th': { symbol: 'm11', formula: [0, 3, 7, 10, 14, 17] },
+  'Dominant 13th': { symbol: '13', formula: [0, 4, 7, 10, 14, 21] },
+  'Major 13th': { symbol: 'Maj13', formula: [0, 4, 7, 11, 14, 21] },
+  'Minor 13th': { symbol: 'm13', formula: [0, 3, 7, 10, 14, 21] },
+  
+  // --- Altered ---
+  'Dominant 7th b5': { symbol: '7b5', formula: [0, 4, 6, 10] },
+  'Dominant 7th #5': { symbol: '7#5', formula: [0, 4, 8, 10] },
+  'Dominant 7th b9': { symbol: '7b9', formula: [0, 4, 7, 10, 13] },
+  'Dominant 7th #9': { symbol: '7#9', formula: [0, 4, 7, 10, 15] },
+  'Altered Dominant': { symbol: '7alt', formula: [0, 4, 6, 10, 13] }, // R, 3, b5, b7, b9
+
+  // --- Special ---
+  'Quartal': { symbol: 'quartal', formula: [0, 5, 10] },
+};
+
+export const CHORD_TYPE_NAMES = Object.keys(CHORD_DEFINITIONS) as ChordTypeName[];
+
 
 export const LEVEL_KEYS: { [level: number]: MusicKey[] } = {
   1: ['C', 'G', 'F'],
@@ -132,7 +190,7 @@ export const LEVEL_MODES: { [level: number]: { mode: DrillMode, name: string }[]
     { mode: 'Intervals', name: 'Intervals' }, 
     { mode: 'Chord Builder', name: 'Chords' },
     { mode: 'ScaleSweeper', name: 'Scale Sweeper' },
-    { mode: 'Degree Dash Pro', name: 'Degree Dash Pro' },
+    { mode: 'Degree Dash Pro', name: 'Degree Dash Pro' }
   ],
   4: [
     { mode: 'Randomizer Roulette', name: 'Roulette' }
@@ -163,25 +221,3 @@ export const TUNING_PRESETS: TuningPreset[] = [
     { name: 'Guitar Standard', notes: GUITAR_STANDARD_TUNING_NOTES },
     { name: 'Bass Standard', notes: BASS_STANDARD_TUNING_NOTES },
 ];
-
-// --- Global Theming ---
-export const DEFAULT_THEME: KeyTheme = {
-    background: 'from-stone-800/80 to-stone-900/90',
-    foreground: 'text-stone-200',
-    accent: 'text-orange-400',
-};
-
-export const KEY_THEMES: Record<MusicKey, KeyTheme> = {
-    'C':  { background: 'from-white/20 to-yellow-100/20', foreground: 'text-stone-100', accent: 'text-yellow-400' },
-    'G':  { background: 'from-orange-500/20 to-orange-300/20', foreground: 'text-stone-100', accent: 'text-orange-300' },
-    'D':  { background: 'from-sky-500/20 to-sky-300/20', foreground: 'text-stone-100', accent: 'text-sky-300' },
-    'A':  { background: 'from-red-600/20 to-red-400/20', foreground: 'text-stone-100', accent: 'text-red-400' },
-    'E':  { background: 'from-purple-600/20 to-purple-400/20', foreground: 'text-stone-100', accent: 'text-purple-400' },
-    'B':  { background: 'from-emerald-500/20 to-emerald-300/20', foreground: 'text-stone-100', accent: 'text-emerald-300' },
-    'F#': { background: 'from-pink-500/20 to-pink-300/20', foreground: 'text-stone-100', accent: 'text-pink-300' },
-    'Db': { background: 'from-slate-400/20 to-slate-200/20', foreground: 'text-stone-100', accent: 'text-slate-300' },
-    'Ab': { background: 'from-indigo-600/20 to-indigo-400/20', foreground: 'text-stone-100', accent: 'text-indigo-400' },
-    'Eb': { background: 'from-amber-500/20 to-amber-300/20', foreground: 'text-stone-100', accent: 'text-amber-300' },
-    'Bb': { background: 'from-blue-700/20 to-blue-500/20', foreground: 'text-stone-100', accent: 'text-blue-400' },
-    'F':  { background: 'from-green-700/20 to-green-500/20', foreground: 'text-stone-100', accent: 'text-green-400' },
-};

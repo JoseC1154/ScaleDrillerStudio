@@ -1,3 +1,5 @@
+
+
 const CACHE_NAME = 'scale-driller-v5';
 const urlsToCache = [
   './',

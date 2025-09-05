@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Scale, Instrument, Handedness, DegreeDashPhase, PerformanceUpdate, Note, DrillMode } from '../types';
 import { getDegreeFromNote, getFretboardNotes } from '../services/music';
 import { ALL_NOTES, BASS_TUNING, GUITAR_TUNING } from '../constants';
-import Piano from './Piano';
+import { Piano } from './Piano';
 import Fretboard from './Fretboard';
-import DegreeSelectorModal from './DegreeSelectorModal';
+import DegreeSelector from './DegreeSelector';
 
 const shuffleArray = <T,>(array: T[]): T[] => {
   const shuffled = [...array];
@@ -30,7 +31,7 @@ const DegreeDash: React.FC<DegreeDashProps> = ({ scale, instrumentSettings, phas
     const [scaleNotesOnInstrument, setScaleNotesOnInstrument] = useState<string[]>([]);
     const [placedNotes, setPlacedNotes] = useState<Record<string, number>>({});
     const [activeNote, setActiveNote] = useState<string | null>(null);
-    const [incorrectNoteFeedback, setIncorrectNoteFeedback] = useState<string[]>([]);
+    const [incorrectNoteFeedback, setIncorrectNoteFeedback] = useState<string | null>(null);
     
     // Effect to determine all valid scale note positions on the current instrument
     useEffect(() => {
@@ -108,7 +109,7 @@ const DegreeDash: React.FC<DegreeDashProps> = ({ scale, instrumentSettings, phas
         const correctDegree = getDegreeFromNote(activeNoteName, scale);
         const isCorrect = degree === correctDegree;
         
-        onUpdatePerformance({ key: scale.key, scaleType: scale.type, drillMode: 'Degree Dash', isCorrect });
+        onUpdatePerformance({ key: scale.key, scaleType: scale.type, drillMode: disableHints ? 'Degree Dash Pro' : 'Degree Dash', isCorrect });
         onPlacement(isCorrect);
         
         if (isCorrect) {
@@ -119,47 +120,49 @@ const DegreeDash: React.FC<DegreeDashProps> = ({ scale, instrumentSettings, phas
                 onRoundComplete();
             }
         } else {
-            setIncorrectNoteFeedback([activeNote]);
-            setTimeout(() => setIncorrectNoteFeedback([]), 500);
+            setIncorrectNoteFeedback(activeNote);
+            setTimeout(() => setIncorrectNoteFeedback(null), 500);
         }
 
         setActiveNote(null);
-    }, [activeNote, scale, placedNotes, scaleNotesOnInstrument, onUpdatePerformance, onPlacement, onRoundComplete]);
+    }, [activeNote, scale, placedNotes, scaleNotesOnInstrument, onUpdatePerformance, onPlacement, onRoundComplete, disableHints]);
     
     const handleCloseSelector = useCallback(() => setActiveNote(null), []);
 
     const instrumentComponent = useMemo(() => {
+        const drillMode: DrillMode = disableHints ? 'Degree Dash Pro' : 'Degree Dash';
         const props = {
             onNotePlayed: handleNoteClick,
             highlightedNotes: scaleNotesOnInstrument,
             noteLabels: placedNotes,
             correctNotes: Object.keys(placedNotes),
-            incorrectNotes: incorrectNoteFeedback,
+            incorrectNote: incorrectNoteFeedback,
             scale: null, // Hide default degree labels
-            drillMode: 'Degree Dash' as DrillMode
+            drillMode: drillMode
         };
         switch(instrumentSettings.instrument) {
             case 'Piano':
-                return <Piano {...props} />;
+                return <Piano {...props} range={{ startMidi: 36, keyCount: 49 }} />;
             case 'Guitar':
             case 'Bass':
                 return <Fretboard {...props} instrument={instrumentSettings.instrument} handedness={instrumentSettings.handedness} labelMode="degrees" />;
             default:
                 return null;
         }
-    }, [handleNoteClick, scaleNotesOnInstrument, placedNotes, incorrectNoteFeedback, instrumentSettings]);
+    }, [handleNoteClick, scaleNotesOnInstrument, placedNotes, incorrectNoteFeedback, instrumentSettings, disableHints]);
     
     const prompt = useMemo(() => {
+        const title = disableHints ? 'Degree Dash Pro' : 'Degree Dash';
         const phaseText = phase === 'timed_finale' ? 'Final Challenge' : `Round ${round}/5`;
         return `${phaseText}: Fill in the ${scale.key} ${scale.type} scale degrees.`;
-    }, [phase, round, scale]);
+    }, [disableHints, phase, round, scale]);
     
     return (
         <div className="drill-layout flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 min-h-0 mt-2 sm:mt-4">
             {activeNote && (
-                <DegreeSelectorModal
-                    onSelect={handleDegreeSelect}
+                <DegreeSelector
                     onClose={handleCloseSelector}
+                    onSelect={handleDegreeSelect}
                 />
             )}
             <div className="instrument-panel relative flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 lg:order-1 overflow-hidden rounded-lg">
@@ -170,7 +173,7 @@ const DegreeDash: React.FC<DegreeDashProps> = ({ scale, instrumentSettings, phas
 
             <div className="question-panel flex flex-col gap-2 sm:gap-4 lg:w-1/3 lg:max-w-sm lg:order-2">
                 <div className="prompt-container text-center p-2 sm:p-4 rounded-lg border border-transparent bg-black/30 flex-1 flex flex-col justify-center">
-                    <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">Degree Dash</h3>
+                    <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">{disableHints ? 'Degree Dash Pro' : 'Degree Dash'}</h3>
                     <p className="text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center">
                         {prompt}
                     </p>

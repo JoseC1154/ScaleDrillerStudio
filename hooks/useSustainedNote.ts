@@ -1,9 +1,7 @@
-
-
-
 import { useRef, useCallback, useEffect } from 'react';
-import { Instrument, Note } from '../types.ts';
-import { ALL_NOTES, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES } from '../constants.ts';
+import { Instrument, Note } from '../types';
+import { ALL_NOTES, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES } from '../constants';
+import { getAudioContext } from '../services/sound';
 
 // --- Frequency Calculation Helpers (self-contained to avoid complex dependencies) ---
 
@@ -56,20 +54,10 @@ const getFrequencyForNoteId = (uniqueId: string, instrument: Instrument): number
  * Ensures only one note is sustained at a time (monophonic).
  * @param instrument The current instrument, used for frequency calculation.
  */
-export const useSustainedNote = (instrument: Instrument) => {
+export const useSustainedNote = (instrument: Instrument, isQuietMode?: boolean) => {
     const audioContextRef = useRef<AudioContext | null>(null);
     const oscillatorsRef = useRef<OscillatorNode[]>([]);
     const masterGainNodeRef = useRef<GainNode | null>(null);
-
-    const getContext = useCallback(() => {
-        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        }
-        if (audioContextRef.current.state === 'suspended') {
-            audioContextRef.current.resume();
-        }
-        return audioContextRef.current;
-    }, []);
 
     const stopNote = useCallback((fadeDuration = 0.4) => {
         const context = audioContextRef.current;
@@ -93,13 +81,18 @@ export const useSustainedNote = (instrument: Instrument) => {
         }
     }, []);
 
-    const playNote = useCallback((noteId: string) => {
+    const playNote = useCallback(async (noteId: string) => {
+        if (isQuietMode) return;
         stopNote(0.1); // Stop previous note very quickly
 
         const fundamentalFreq = getFrequencyForNoteId(noteId, instrument);
         if (fundamentalFreq === null) return;
         
-        const context = getContext();
+        const context = await getAudioContext();
+        if (!context) return;
+
+        audioContextRef.current = context; // Store the context for stopNote to use
+
         const masterGain = context.createGain();
         masterGain.connect(context.destination);
 
@@ -137,15 +130,12 @@ export const useSustainedNote = (instrument: Instrument) => {
         oscillatorsRef.current = activeOscillators;
         masterGainNodeRef.current = masterGain;
 
-    }, [instrument, getContext, stopNote]);
+    }, [instrument, stopNote, isQuietMode]);
     
     // Cleanup audio resources when the component unmounts
     useEffect(() => {
         return () => {
             stopNote(0.01); // Stop immediately
-            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-                audioContextRef.current.close().catch(() => {});
-            }
         }
     }, [stopNote]);
 

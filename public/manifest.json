@@ -4,19 +4,19 @@
   "description": "Your personal music theory trainer.",
   "icons": [
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLjU1LTItLjU1Yy0yLjIxIDAtNCAxLjc5LTQgNHMxLjc5IDQgNCA0czQtMS43OSA0LTRWN2g0VjNoLTZ6Ii8+PC9zdmc+",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg+",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLjU1LTItLjU1Yy0yLjIxIDAtNCAxLjc5LTQgNHMxLjc5IDQgNCA0czQtMS43OSA0LTRWN2g0VjNoLTZ6Ii8+PC9zdmc+",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg+",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLjU1LTItLjU1Yy0yLjIxIDAtNCAxLjc5LTQgNHMxLjc5IDQgNCA0czQtMS43OSA0LTRWN2g0VjNoLTZ6Ii8+PC9zdmc+",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNmOTczMTYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiMyOTI1MjQiPjxwYXRoIGQ9Ik0xMiAzdjEwLjU1Yy0uNTktLjM0LTEuMjctLS41NS0yLS41NWMtMi4yMSAwLTQgMS43OS00IDRzMS43OSA0IDQgNHM0LTEuNzkgNC00VjdoNFYzaC02eiIvPjwvc3ZnPg+",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"

@@ -1,12 +1,39 @@
+import { ALL_NOTES, BASS_TUNING, GUITAR_TUNING, SCALE_FORMULAS, DEGREE_NAMES, MUSIC_KEYS, NASHVILLE_DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, CHORD_TYPES, CHORD_FORMULAS, SCALE_TYPES, CHORD_DEFINITIONS, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES, CHORD_TYPE_NAMES } from '../constants';
+import { Note, MusicKey, ScaleType, Scale, Question, FretboardNote, DrillSettings, PerformanceData, DrillMode, TuningNote, Key, ChordDefinition, Chord, ChordTypeName, VoicingType, Instrument, UserChord } from '../types';
 
+export const getNoteIndex = (note: Note): number => ALL_NOTES.indexOf(note);
 
+export const getNoteFromIndex = (index: number): Note => {
+    const noteCount = ALL_NOTES.length;
+    // ((n % m) + m) % m handles negative numbers correctly for modulo.
+    return ALL_NOTES[((index % noteCount) + noteCount) % noteCount];
+};
 
-import { ALL_NOTES, SCALE_FORMULAS, DEGREE_NAMES, MUSIC_KEYS, NASHVILLE_DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, CHORD_TYPES, CHORD_FORMULAS, SCALE_TYPES } from '../constants.ts';
-import { Note, MusicKey, ScaleType, Scale, Question, FretboardNote, DrillSettings, PerformanceData, DrillMode, TuningNote, Key } from '../types.ts';
+export const getTransposedChordName = (originalName: string, semitones: number): string => {
+    if (semitones === 0) {
+        return originalName;
+    }
 
-const getNoteIndex = (note: Note): number => ALL_NOTES.indexOf(note);
+    // Regex to capture root note (C, F#, Db) and the rest of the chord name
+    const match = originalName.match(/^([A-G][b#]?)(.*)/);
+    
+    if (!match) {
+        return originalName; // Return original if parsing fails
+    }
 
-const getNoteFromIndex = (index: number): Note => ALL_NOTES[index % ALL_NOTES.length];
+    const [, rootStr, restOfName] = match;
+    const rootNote = rootStr as Note;
+
+    const rootIndex = getNoteIndex(rootNote);
+    if (rootIndex === -1) {
+        return originalName; // Should not happen with valid note names
+    }
+    
+    const transposedRootIndex = rootIndex + semitones;
+    const newRootNote = getNoteFromIndex(transposedRootIndex);
+
+    return `${newRootNote}${restOfName}`;
+};
 
 export const getScale = (key: MusicKey, scaleType: ScaleType): Scale => {
   const rootIndex = getNoteIndex(key);
@@ -137,6 +164,7 @@ export const generateDrillQuestions = (
   const isPracticeMode = ['Practice', 'Nashville Numbers', 'Degree Training', 'Intervals', 'Chord Builder', 'Galaxy Constructor'].includes(drillMode);
 
   const getRandomKey = (): MusicKey => {
+      if (settings.key && settings.key !== 'Random') return settings.key;
       if (isPracticeMode && performance) {
           return getWeightedRandom(keysToUse, performance.byKey, k => k);
       }
@@ -177,7 +205,7 @@ export const generateDrillQuestions = (
   }
 
   if (drillMode === 'ScaleSweeper') {
-        const questionKey = getRandomKey();
+        const questionKey = settings.key === 'Random' ? getRandomKey() : settings.key;
         const scaleType = settings.scaleType === 'Major' || settings.scaleType === 'Minor' ? settings.scaleType : 'Major';
         const scale = getScale(questionKey, scaleType);
         
@@ -420,8 +448,8 @@ export const getClosestNote = (
 
 // --- Unique Note ID Helpers ---
 
-// Converts a unique note ID like 'C4' or 'F#3' to a MIDI number
-const noteIdToMidi = (noteId: string): number => {
+// Converts a unique piano note ID like 'C4' to a MIDI number
+export const noteIdToMidi = (noteId: string): number => {
     const match = noteId.match(/([A-G][b#]?)(-?\d+)/);
     if (!match) return 0;
     const [, noteName, octaveStr] = match;
@@ -430,8 +458,25 @@ const noteIdToMidi = (noteId: string): number => {
     return (octave + 1) * 12 + noteIndex;
 };
 
+export const fretIdToMidi = (fretId: string, instrument: 'Guitar' | 'Bass'): number | null => {
+    const parts = fretId.split('-');
+    if (parts.length !== 3) return null;
+    const [, stringIndexStr, fretStr] = parts;
+    const stringIndex = parseInt(stringIndexStr, 10);
+    const fret = parseInt(fretStr, 10);
+
+    const tuning = instrument === 'Guitar' ? GUITAR_STANDARD_TUNING_NOTES : BASS_STANDARD_TUNING_NOTES;
+    if (stringIndex < 0 || stringIndex >= tuning.length) return null;
+
+    const openStringNote = tuning[stringIndex];
+    const openStringMidi = noteIdToMidi(`${openStringNote.note}${openStringNote.octave}`);
+    
+    return openStringMidi + fret;
+};
+
+
 // Converts a MIDI number to a unique note ID like 'C4'
-const midiToNoteId = (midiNumber: number): string => {
+export const midiToNoteId = (midiNumber: number): string => {
     const noteName = ALL_NOTES[midiNumber % 12];
     const octave = Math.floor(midiNumber / 12) - 1;
     return `${noteName}${octave}`;
@@ -464,4 +509,216 @@ export const getUniqueAnswersForQuestion = (question: Question): string[] => {
         const targetMidi = rootMidi + semitoneDifference;
         return midiToNoteId(targetMidi);
     });
+};
+
+// --- Chord Helpers ---
+
+const SEMITONE_TO_INTERVAL_NAME: Record<number, string> = {
+    0: 'R', 1: 'm2', 2: 'M2', 3: 'm3', 4: 'M3', 5: 'P4', 6: 'TT/♭5', 7: 'P5',
+    8: 'm6/♯5', 9: 'M6', 10: 'm7', 11: 'M7', 12: '8va',
+    13: '♭9', 14: 'M9', 15: '♯9',
+    17: 'P11', 18: '♯11',
+    20: 'm13', 21: 'M13'
+};
+
+const getIntervalName = (semitones: number): string => {
+    return SEMITONE_TO_INTERVAL_NAME[semitones] || `+${semitones}st`;
+};
+
+export const getChord = (root: Note, typeName: ChordTypeName): Chord => {
+  const definition = CHORD_DEFINITIONS[typeName];
+  const rootIndex = getNoteIndex(root);
+  const notes = definition.formula.map(interval => getNoteFromIndex(rootIndex + interval));
+  const intervals = definition.formula.map(semitones => getIntervalName(semitones));
+  return {
+    root,
+    name: `${root}${definition.symbol}`,
+    notes,
+    intervals,
+  };
+};
+
+export const transposeNote = (note: Note, semitones: number): Note => {
+    const noteIndex = getNoteIndex(note);
+    return getNoteFromIndex(noteIndex + semitones);
+};
+
+
+// --- Custom Chord Helpers ---
+
+export const sortUniqueNotes = (notes: string[]): string[] => {
+  return [...notes].sort((a, b) => noteIdToMidi(a) - noteIdToMidi(b));
+};
+
+export const getChordFromNotes = (notes: string[], name: string = 'Custom Chord'): Chord | null => {
+    if (notes.length === 0) return null;
+
+    const sortedNotes = sortUniqueNotes(notes);
+    const rootUniqueId = sortedNotes[0];
+    const rootNoteName = rootUniqueId.replace(/-?\d.*$/, '') as Note;
+    const rootMidi = noteIdToMidi(rootUniqueId);
+
+    const chordIntervals: string[] = [];
+    const uniqueNoteNames = new Set<Note>();
+
+    sortedNotes.forEach(noteId => {
+        const noteName = noteId.replace(/-?\d.*$/, '') as Note;
+        uniqueNoteNames.add(noteName);
+        
+        const currentMidi = noteIdToMidi(noteId);
+        const semitones = currentMidi - rootMidi;
+        chordIntervals.push(getIntervalName(semitones));
+    });
+
+    return {
+        root: rootNoteName,
+        name: name,
+        notes: Array.from(uniqueNoteNames),
+        intervals: chordIntervals
+    };
+};
+
+
+// --- Full-Range Voicing Engine ---
+
+export const calculateMidiVoicing = (root: Note, typeName: ChordTypeName, baseOctave: number): number[] => {
+    const definition = CHORD_DEFINITIONS[typeName];
+    if (!definition) return [];
+    
+    const rootMidiInOctave = (baseOctave + 1) * 12 + getNoteIndex(root);
+    return definition.formula.map(interval => rootMidiInOctave + interval);
+};
+
+export const createChordFromDefinition = (root: Note, typeName: ChordTypeName, name: string, baseOctave: number = 4): Omit<UserChord, 'id'> | null => {
+    const definition = CHORD_DEFINITIONS[typeName];
+    if (!definition) return null;
+
+    const rootMidiInOctave = (baseOctave + 1) * 12 + getNoteIndex(root);
+    const midiNotes = definition.formula.map(interval => rootMidiInOctave + interval);
+
+    return {
+        name: name,
+        notes: midiNotes.map(midiToNoteId),
+    };
+};
+
+export const applyInversion = (midiNotes: number[], inversion: number): number[] => {
+    if (inversion === 0 || midiNotes.length < 2) {
+        return midiNotes;
+    }
+    const sorted = [...midiNotes].sort((a, b) => a - b);
+    const safeInversion = inversion % sorted.length;
+    if (safeInversion === 0) return sorted;
+
+    const notesToMove = sorted.slice(0, safeInversion);
+    const remainingNotes = sorted.slice(safeInversion);
+    const invertedNotes = [...remainingNotes, ...notesToMove.map(n => n + 12)];
+    return invertedNotes;
+};
+
+
+export const applyVoicing = (midiNotes: number[], voicingType: VoicingType): number[] => {
+    if (voicingType === 'close' || midiNotes.length < 3) {
+        return midiNotes;
+    }
+    // Simple spread: move second note from bottom up an octave. 'open' is treated the same for now.
+    const sorted = [...midiNotes].sort((a, b) => a - b);
+    const root = sorted[0];
+    const second = sorted[1];
+    const rest = sorted.slice(2);
+    
+    return [root, ...rest, second + 12].sort((a,b) => a-b);
+};
+
+export const getChordCentroid = (midiNotes: number[]): number => {
+    if (midiNotes.length === 0) return 60; // Default to C4 if no notes
+    const sum = midiNotes.reduce((acc, note) => acc + note, 0);
+    return sum / midiNotes.length;
+};
+
+export const calculateMidiRange = (options: { centroidMidi: number, octaves: number }): { startMidi: number, keyCount: number } => {
+    const { centroidMidi, octaves } = options;
+    const keyCount = Math.max(12, octaves * 12);
+    const startMidi = Math.round(centroidMidi - keyCount / 2);
+    
+    // Clamp to a reasonable visible piano range (A0 to C8)
+    const minMidi = 21;
+    const maxMidi = 108;
+    
+    let finalStartMidi = Math.max(minMidi, startMidi);
+    if (finalStartMidi + keyCount > maxMidi) {
+        finalStartMidi = maxMidi - keyCount;
+    }
+    
+    return { startMidi: Math.floor(finalStartMidi), keyCount };
+};
+
+export const mapMidiToFretboardVoicing = (
+    midiNotes: number[],
+    instrument: 'Guitar' | 'Bass'
+): string[] => {
+    if (midiNotes.length === 0) return [];
+
+    const tuning = instrument === 'Guitar' ? GUITAR_STANDARD_TUNING_NOTES : BASS_STANDARD_TUNING_NOTES;
+    const tuningMidi = tuning.map(t => noteIdToMidi(`${t.note}${t.octave}`));
+    const fretCount = 24;
+    const numStrings = tuning.length;
+
+    const voicing: { string: number, fret: number, noteMidi: number }[] = [];
+    const uniqueMidiNotes = Array.from(new Set(midiNotes));
+
+    for (const noteMidi of uniqueMidiNotes) {
+        const possiblePositions: { string: number, fret: number }[] = [];
+        for (let s = 0; s < numStrings; s++) {
+            const fret = noteMidi - tuningMidi[s];
+            if (fret >= 0 && fret <= fretCount) {
+                possiblePositions.push({ string: s, fret });
+            }
+        }
+
+        if (possiblePositions.length > 0) {
+            // Find the position with the lowest fret number that hasn't been used.
+            const sortedPos = possiblePositions.sort((a, b) => a.fret - b.fret);
+            let bestPos = sortedPos[0];
+            // Simple check to avoid using the same string twice for different notes if possible
+            if (voicing.some(v => v.string === bestPos.string) && sortedPos.length > 1) {
+                const alternative = sortedPos.find(p => !voicing.some(v => v.string === p.string));
+                if (alternative) bestPos = alternative;
+            }
+            voicing.push({ ...bestPos, noteMidi });
+        }
+    }
+    return voicing.map(v => `${ALL_NOTES[v.noteMidi % 12]}-${v.string}-${v.fret}`);
+};
+
+export const identifyChordFromMidi = (midiNotes: number[]): { root: Note, typeName: ChordTypeName } | null => {
+  if (midiNotes.length < 2) return null;
+
+  const uniqueNoteIndexes = Array.from(new Set(midiNotes.map(m => m % 12))).sort((a, b) => a - b);
+
+  // Try each note as a potential root
+  for (let i = 0; i < uniqueNoteIndexes.length; i++) {
+    const rootIndex = uniqueNoteIndexes[i];
+    const intervals = uniqueNoteIndexes.map(noteIndex => (noteIndex - rootIndex + 12) % 12).sort((a, b) => a - b);
+
+    // Compare intervals with definitions
+    const typeName = (Object.keys(CHORD_DEFINITIONS) as ChordTypeName[]).find(typeName => {
+        const definition = CHORD_DEFINITIONS[typeName];
+        // For identification, we need to be flexible with extended chords.
+        // An 11th chord contains a 9th and 7th. A user might only play the 11th, root, 3rd, 5th.
+        // For now, we'll do a strict equality check.
+        const formula = [...definition.formula].map(f => f % 12).filter((value, index, self) => self.indexOf(value) === index).sort((a,b)=>a-b);
+        const simpleIntervals = intervals.map(f => f % 12).filter((value, index, self) => self.indexOf(value) === index).sort((a,b)=>a-b);
+
+        return simpleIntervals.length === formula.length && simpleIntervals.every((val, index) => val === formula[index]);
+    });
+
+    if (typeName) {
+      return {
+        root: getNoteFromIndex(rootIndex),
+        typeName: typeName,
+      };
+    }
+  }
+  return null;
 };

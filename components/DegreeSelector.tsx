@@ -2,25 +2,33 @@ import React from 'react';
 
 interface DegreeSelectorProps {
   onSelect: (degree: number) => void;
-  isDisabled?: boolean;
+  onClose: () => void;
 }
 
-const DegreeSelector: React.FC<DegreeSelectorProps> = ({ onSelect, isDisabled = false }) => {
+const DegreeSelector: React.FC<DegreeSelectorProps> = ({ onSelect, onClose }) => {
   const allDegrees = [1, 2, 3, 4, 5, 6, 7];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-stone-900/80 backdrop-blur-lg p-2 z-30 pb-[calc(0.5rem+env(safe-area-inset-bottom))] border-t border-stone-700/50">
+    <div 
+        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" 
+        onClick={onClose} 
+        aria-hidden="true"
+    >
       <div
-        className="grid grid-cols-7 gap-2 max-w-lg mx-auto"
-        role="toolbar"
+        role="dialog"
+        aria-modal="true"
         aria-label="Select a scale degree"
+        className="bg-stone-900 border border-orange-500 rounded-lg p-4 shadow-2xl grid grid-cols-4 gap-2 animate-key-appear"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
       >
         {allDegrees.map(degree => (
           <button
             key={degree}
-            onClick={() => onSelect(degree)}
-            disabled={isDisabled}
-            className="py-3 rounded-lg font-bold text-lg flex items-center justify-center transition-all bg-stone-800 hover:bg-orange-500 text-white transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-stone-700 disabled:text-stone-500 disabled:transform-none disabled:cursor-not-allowed"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(degree);
+            }}
+            className="w-12 h-12 rounded-md font-bold text-lg flex items-center justify-center transition-all bg-stone-800 hover:bg-orange-500 text-white transform hover:scale-110"
             aria-label={`Select degree ${degree}`}
           >
             {degree}

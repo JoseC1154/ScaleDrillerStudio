@@ -1,7 +1,4 @@
-
-
-
-import { UserData, PerformanceStat, MusicKey, ScaleType, PerformanceUpdate, DrillMode } from '../types.ts';
+import { UserData, PerformanceStat, MusicKey, ScaleType, PerformanceUpdate, DrillMode, UserChord } from '../types';
 
 const USER_DATA_KEY = 'scale-driller-userData';
 
@@ -20,6 +17,14 @@ export const getInitialUserData = (): UserData => ({
   preDrillInfoSeen: {},
   simonHighScore: 0,
   hasCompletedTutorial: false,
+  userChords: [
+    { id: 'seed-cmaj7', name: 'Cmaj7', notes: ['C4', 'E4', 'G4', 'B4'] },
+    { id: 'seed-dm9', name: 'Dm9', notes: ['D4', 'F4', 'A4', 'C5', 'E5'] },
+    { id: 'seed-g13', name: 'G13', notes: ['G3', 'B3', 'D4', 'F4', 'A4', 'E5'] },
+    { id: 'seed-fsm7b5e', name: 'F#m7b5/E', notes: ['E3', 'F#3', 'A3', 'C4'] },
+  ],
+  recentChords: [],
+  isQuietMode: false,
 });
 
 export const loadUserData = (): UserData => {
@@ -53,8 +58,7 @@ export const loadUserData = (): UserData => {
         }
       }
 
-
-      return {
+      const finalData = {
         ...initialData,
         ...parsedData,
         performance: {
@@ -66,7 +70,18 @@ export const loadUserData = (): UserData => {
         preDrillInfoSeen: parsedData.preDrillInfoSeen || {},
         simonHighScore: parsedData.simonHighScore || 0,
         hasCompletedTutorial: parsedData.hasCompletedTutorial || false,
+        userChords: parsedData.userChords || [],
+        recentChords: parsedData.recentChords || [],
+        isQuietMode: parsedData.isQuietMode || false,
       };
+
+      // If a returning user has no chords, give them the seed data.
+      if (!finalData.userChords || finalData.userChords.length === 0) {
+          finalData.userChords = initialData.userChords;
+      }
+      
+      return finalData;
+
     }
   } catch (error) {
     console.error('Error loading user data:', error);
@@ -77,8 +92,7 @@ export const loadUserData = (): UserData => {
 export const saveUserData = (userData: UserData): void => {
   try {
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
-  } catch (error) {
-    console.error('Error saving user data:', error);
+  } catch (error) {    console.error('Error saving user data:', error);
   }
 };
 
@@ -128,6 +142,36 @@ export const updatePerformanceStat = (currentData: UserData, update: Performance
 
   return newData;
 };
+
+// --- Custom Chord Helpers ---
+
+export const addUserChord = (userData: UserData, newChordData: Omit<UserChord, 'id'>): { newUserData: UserData, newChord: UserChord } => {
+    const newChord: UserChord = { ...newChordData, id: new Date().toISOString() + Math.random() };
+    const newUserChords = [...userData.userChords, newChord];
+    return {
+        newUserData: { ...userData, userChords: newUserChords },
+        newChord: newChord
+    };
+};
+
+export const addUserChords = (userData: UserData, newChordsData: Omit<UserChord, 'id'>[]): { newUserData: UserData, newChords: UserChord[] } => {
+    const newChordsWithIds: UserChord[] = newChordsData.map((chord, index) => ({
+        ...chord,
+        id: new Date().toISOString() + Math.random() + index
+    }));
+    const newUserChords = [...userData.userChords, ...newChordsWithIds];
+    return {
+        newUserData: { ...userData, userChords: newUserChords },
+        newChords: newChordsWithIds
+    };
+};
+
+
+export const deleteUserChord = (userData: UserData, chordId: string): UserData => {
+    const newUserChords = userData.userChords.filter(c => c.id !== chordId);
+    return { ...userData, userChords: newUserChords };
+};
+
 
 export const getAccuracy = (stat: PerformanceStat | undefined): number => {
   if (!stat || (stat.correct === 0 && stat.incorrect === 0)) return -1; // -1 to indicate not practiced

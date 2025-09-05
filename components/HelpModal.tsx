@@ -1,7 +1,7 @@
 import React from 'react';
-import { Scale } from '../types.ts';
-import { DEGREE_NAMES } from '../constants.ts';
-import { CloseIcon } from './Icons.tsx';
+import { Scale } from '../types';
+import { DEGREE_NAMES } from '../constants';
+import { CloseIcon } from './Icons';
 
 interface HelpModalProps {
   scale: Scale;

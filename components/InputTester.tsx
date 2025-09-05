@@ -1,21 +1,19 @@
-
-
-
 import React, { useState, useCallback, useEffect } from 'react';
-import { DrillSettings, Note } from '../types.ts';
-import { useMidi } from '../hooks/useMidi.ts';
-import { useAudioPitch } from '../hooks/useAudioPitch.ts';
-import Piano from './Piano.tsx';
-import Fretboard from './Fretboard.tsx';
-import { playNoteSound } from '../services/sound.ts';
+import { DrillSettings, Note } from '../types';
+import { useMidi } from '../hooks/useMidi';
+import { useAudioPitch } from '../hooks/useAudioPitch';
+import { Piano } from './Piano';
+import Fretboard from './Fretboard';
+import { playNoteSound } from '../services/sound';
 
 interface InputTesterProps {
   settings: DrillSettings;
   onQuit: () => void;
   onSettingChange: <K extends keyof DrillSettings>(key: K, value: DrillSettings[K]) => void;
+  isQuietMode?: boolean;
 }
 
-const InputTester: React.FC<InputTesterProps> = ({ settings, onQuit, onSettingChange }) => {
+const InputTester: React.FC<InputTesterProps> = ({ settings, onQuit, onSettingChange, isQuietMode = false }) => {
   const [lastNote, setLastNote] = useState<string | null>(null);
   const [lastNoteVolume, setLastNoteVolume] = useState(0);
 
@@ -27,12 +25,12 @@ const InputTester: React.FC<InputTesterProps> = ({ settings, onQuit, onSettingCh
     }
   }, [settings.inputMethod]);
   
-  const handleNotePlayedWithSound = useCallback((note: string) => {
+  const handleNotePlayedWithSound = useCallback(async (note: string) => {
     if (settings.inputMethod === 'Touch') {
-      playNoteSound(note, settings.instrument);
+      await playNoteSound(note, settings.instrument, isQuietMode);
     }
     handleNotePlayed(note);
-  }, [handleNotePlayed, settings.inputMethod, settings.instrument]);
+  }, [handleNotePlayed, settings.inputMethod, settings.instrument, isQuietMode]);
 
 
   const { midiError } = useMidi(
@@ -91,7 +89,7 @@ const InputTester: React.FC<InputTesterProps> = ({ settings, onQuit, onSettingCh
   const renderInstrument = () => {
     switch (settings.instrument) {
       case 'Piano':
-        return <Piano onNotePlayed={handleNotePlayedWithSound} highlightedNotes={highlightedNotes} liveVolume={liveVolume} />;
+        return <Piano onNotePlayed={handleNotePlayedWithSound} highlightedNotes={highlightedNotes} liveVolume={liveVolume} range={{ startMidi: 36, keyCount: 49 }} />;
       case 'Guitar':
       case 'Bass':
         return <Fretboard instrument={settings.instrument} onNotePlayed={handleNotePlayedWithSound} highlightedNotes={highlightedNotes} handedness={settings.handedness} labelMode="notes" scale={null} liveVolume={liveVolume} />;
@@ -195,7 +193,7 @@ const InputTester: React.FC<InputTesterProps> = ({ settings, onQuit, onSettingCh
         {renderMicSettings()}
       </div>
 
-      <div className="my-6">
+      <div className="my-6 h-48 overflow-hidden rounded-lg">
         {renderInstrument()}
       </div>
 

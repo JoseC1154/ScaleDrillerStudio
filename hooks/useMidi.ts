@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Note } from '../types.ts';
-import { ALL_NOTES } from '../constants.ts';
+import { Note } from '../types';
+import { ALL_NOTES } from '../constants';
 
 const midiToUniqueNote = (midiNumber: number): string => {
   const noteName = ALL_NOTES[midiNumber % 12];

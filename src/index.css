@@ -1,0 +1,243 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+html, body, #root {
+  height: 100%;
+}
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: #1c1917; /* stone-950 */
+  color: #e7e5e4; /* stone-200 */
+  overscroll-behavior: none;
+}
+/* Simple scrollbar styling for a more cohesive look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #292524; /* stone-800 */
+}
+::-webkit-scrollbar-thumb {
+  background: #f97316; /* orange-500 */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #fb923c; /* orange-400 */
+}
+@keyframes float-up-fade {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+}
+.animate-float-up {
+  animation: float-up-fade 1.5s ease-out forwards;
+}
+@keyframes level-up-pulse {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
+  }
+  50% {
+    transform: scale(1.15);
+    text-shadow: 0 0 20px rgba(255, 255, 100, 1), 0 0 35px rgba(255, 165, 0, 1);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
+  }
+}
+.animate-level-up {
+    animation: level-up-pulse 1.5s ease-in-out;
+}
+@keyframes perfect-pulse {
+  0% { text-shadow: 0 0 4px rgba(255, 215, 0, 0.5); transform: scale(1); }
+  50% { text-shadow: 0 0 20px rgba(255, 225, 100, 1), 0 0 35px rgba(255, 215, 0, 1); transform: scale(1.1); }
+  100% { text-shadow: 0 0 4px rgba(255, 215, 0, 0.5); transform: scale(1); }
+}
+.animate-perfect-pulse {
+  animation: perfect-pulse 1.5s ease-in-out;
+}
+@keyframes bpm-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); color: #f472b6; } /* fuchsia-400 */
+  100% { transform: scale(1); }
+}
+.animate-bpm-pulse {
+  animation: bpm-pulse 1s ease-in-out;
+}
+@keyframes countdown-animation {
+  0% { transform: scale(0.5); opacity: 0; }
+  40% { transform: scale(1.2); opacity: 1; }
+  60% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.countdown-text {
+  animation: countdown-animation 1s ease-in-out forwards;
+}
+@keyframes key-appear {
+  from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      visibility: visible;
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+  }
+}
+.animate-key-appear {
+    animation: key-appear 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.key-hidden {
+  visibility: hidden;
+}
+@keyframes rhythm-sweep {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+.rhythm-bar {
+  position: fixed;
+  bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  left: 0;
+  height: 3px;
+  background-color: #f97316;
+  box-shadow: 0 0 8px #f97316, 0 0 12px #fb923c;
+  animation-name: rhythm-sweep;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  z-index: 20;
+}
+@keyframes danger-pulse {
+  0%, 100% { opacity: var(--opacity, 0); }
+  50% { opacity: calc(var(--opacity, 0) * 1.5); }
+}
+.vignette-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 50%, black 100%);
+  opacity: var(--opacity, 0);
+  transition: all 0.5s ease-in-out;
+  z-index: 20;
+}
+.vignette-danger {
+  background: radial-gradient(circle, transparent 55%, #6b211a 100%); /* Faint red */
+  animation-name: danger-pulse;
+  animation-duration: 2s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Animation for Note Discovery Transition */
+@keyframes screen-shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-1px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+.animate-screen-shake {
+  animation: screen-shake 0.5s ease-in-out;
+}
+
+@keyframes note-fall {
+  from {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100px) rotate(15deg);
+  }
+}
+.animate-note-fall {
+  animation: note-fall 0.8s ease-in forwards;
+}
+
+@keyframes note-sacrifice-fall {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(80px) scale(0.5) rotate(-25deg);
+  }
+}
+.animate-note-sacrifice-fall {
+  animation: note-sacrifice-fall 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+}
+
+@keyframes feedback-badge-fade {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  80% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-20px) scale(0.9); opacity: 0; }
+}
+.animate-feedback-badge {
+  animation: feedback-badge-fade 1.5s ease-out forwards;
+}
+
+
+/* Landscape Mode Overrides for Mobile */
+@media (orientation: landscape) and (max-height: 500px) {
+  body.in-drill .app-header {
+    display: none;
+  }
+  body.in-drill .bottom-nav-container {
+    display: none;
+  }
+  .drill-layout {
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+  }
+  .drill-layout .instrument-panel {
+    min-height: 0;
+    flex-grow: 1;
+  }
+  .drill-layout .question-panel {
+    order: -1 !important; /* Move to top */
+    width: 100% !important;
+    max-width: none !important;
+    flex-direction: row !important; /* Arrange children horizontally */
+    align-items: center !important;
+    gap: 1rem !important;
+    padding: 0 0.5rem !important;
+    flex: 0 0 auto; /* Don't grow or shrink */
+  }
+  .drill-layout .prompt-container {
+    flex-grow: 1 !important;
+    padding: 0.25rem !important;
+    min-height: auto !important;
+    border: none !important;
+    background-color: transparent !important;
+  }
+  .drill-layout .prompt-container h3 {
+    display: none; /* Hide mode name */
+  }
+  .drill-layout .prompt-container p {
+    font-size: 1.125rem !important; /* text-lg */
+    line-height: 1.5rem !important;
+  }
+  .drill-layout .actions-container {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 0.25rem !important;
+    flex-shrink: 0;
+  }
+  .drill-layout .actions-container button {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem !important;
+  }
+}

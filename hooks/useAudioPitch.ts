@@ -1,9 +1,7 @@
 
-
-
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Note } from '../types.ts';
-import { frequencyToNote } from '../services/music.ts';
+import { Note } from '../types';
+import { frequencyToNote } from '../services/music';
 
 const STABLE_NOTE_THRESHOLD = 3; // Number of consecutive frames a note must be detected to be considered "played"
 

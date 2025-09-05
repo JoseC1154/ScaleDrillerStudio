@@ -1,62 +1,63 @@
+import { Instrument } from '../types';
+import { noteIdToMidi, fretIdToMidi } from './music';
 
-import { ALL_NOTES, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES } from '../constants.ts';
-import { Instrument, Note } from '../types.ts';
+// This will hold the single AudioContext for the entire application.
+let audioContext: AudioContext | null = null;
 
-let audioContext: AudioContext;
-const getAudioContext = () => {
-    if (!audioContext || audioContext.state === 'closed') {
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+/**
+ * Gets the singleton AudioContext, creating and resuming it if necessary.
+ * This MUST be called from a user-initiated event to work on all browsers.
+ * @returns {Promise<AudioContext | null>} A promise that resolves with the active AudioContext.
+ */
+export const getAudioContext = async (): Promise<AudioContext | null> => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  
+  if (!audioContext || audioContext.state === 'closed') {
+    try {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    } catch (e) {
+      console.error('Web Audio API is not supported in this browser.');
+      return null;
     }
-    // For iOS and some browsers, audio context might be suspended until a user interaction.
-    if (audioContext.state === 'suspended') {
-        audioContext.resume();
+  }
+
+  if (audioContext.state === 'suspended') {
+    try {
+      await audioContext.resume();
+    } catch (e) {
+      console.error('Failed to resume AudioContext. User interaction might be required.', e);
+      return null; // Can't proceed if context is suspended and can't be resumed.
     }
-    return audioContext;
+  }
+
+  return audioContext;
 };
 
-const noteToMidi = (noteName: Note, octave: number): number => {
-    const noteIndex = ALL_NOTES.indexOf(noteName as Note);
-    // MIDI note number formula: 12 * (octave + 1) + note_index
-    return (octave + 1) * 12 + noteIndex;
-}
 
 const midiToFrequency = (midiNumber: number): number => {
     // A4 = 440 Hz = MIDI note 69
     return 440 * Math.pow(2, (midiNumber - 69) / 12);
 }
 
-const getMidiForPianoKey = (uniqueId: string): number | null => {
-    const match = uniqueId.match(/([A-G][b#]?)(-?\d+)/);
-    if (!match) return null;
-    const [, noteName, octaveStr] = match;
-    return noteToMidi(noteName as Note, parseInt(octaveStr, 10));
-}
+export const playNoteSound = async (uniqueId: string, instrument: Instrument, isQuietMode?: boolean) => {
+    if (isQuietMode) return;
 
-const getMidiForFret = (uniqueId: string, instrument: Instrument): number | null => {
-    const parts = uniqueId.split('-');
-    if (parts.length !== 3) return null;
-    const [, stringIndexStr, fretStr] = parts;
-    const stringIndex = parseInt(stringIndexStr, 10);
-    const fret = parseInt(fretStr, 10);
-
-    const tuning = instrument === 'Guitar' ? GUITAR_STANDARD_TUNING_NOTES : BASS_STANDARD_TUNING_NOTES;
-    if (stringIndex < 0 || stringIndex >= tuning.length) return null;
-
-    const openStringNote = tuning[stringIndex];
-    const openStringMidi = noteToMidi(openStringNote.note, openStringNote.octave);
+    const context = await getAudioContext();
     
-    return openStringMidi + fret;
-}
-
-export const playNoteSound = (uniqueId: string, instrument: Instrument) => {
+    if (!context) {
+        console.warn('AudioContext not available or running. Sound aborted.');
+        return;
+    }
+    
     try {
-        const context = getAudioContext();
         let midiNumber: number | null = null;
 
         if (instrument === 'Piano') {
-            midiNumber = getMidiForPianoKey(uniqueId);
+            midiNumber = noteIdToMidi(uniqueId);
         } else if (instrument === 'Guitar' || instrument === 'Bass') {
-            midiNumber = getMidiForFret(uniqueId, instrument);
+            midiNumber = fretIdToMidi(uniqueId, instrument);
         }
 
         if (midiNumber === null) {

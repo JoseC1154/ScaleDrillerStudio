@@ -8,18 +8,35 @@ export type DrillMode = 'Key Conjurer' | 'Note Professor' | 'Practice' | 'Time A
 export type InputMethod = 'Touch' | 'MIDI' | 'Mic';
 export type Instrument = 'Piano' | 'Guitar' | 'Bass';
 export type Handedness = 'Right' | 'Left';
-export type ActiveView = 'drill' | 'report' | 'guide' | 'tuner';
+export type ActiveView = 'drill' | 'report' | 'guide' | 'tuner' | 'chord' | 'dictionary';
 export type SweeperPhase = 'discovery' | 'time_attack' | 'intermission';
 export type DegreeDashPhase = 'fill_in' | 'timed_finale' | 'intermission';
 export type DeviceType = 'mobile' | 'desktop';
 export type NoteDiscoveryRound = 1 | 2 | 3 | 4 | 5;
 export type QuizPhase = 'loading' | 'info' | 'countdown' | 'active' | 'animation' | 'intermission' | 'pre-round-animation';
+export type VoicingType = 'close' | 'spread' | 'open';
 
-export interface KeyTheme {
-  background: string;
-  foreground: string;
-  accent: string;
-}
+export type ChordTypeName =
+  // Dyads
+  | 'Power Chord' | 'Perfect Fifth' | 'Major Third Dyad' | 'Minor Third Dyad'
+  // Triads
+  | 'Major' | 'Minor' | 'Diminished' | 'Augmented'
+  | 'Suspended 2' | 'Suspended 4' | 'Flat Five'
+  // Sevenths
+  | 'Dominant 7th' | 'Major 7th' | 'Minor 7th'
+  | 'Minor Major 7th' | 'Diminished 7th' | 'Half-Diminished 7th'
+  | 'Augmented 7th' | 'Augmented Major 7th'
+  // Extended
+  | 'Major 6th' | 'Minor 6th'
+  | 'Dominant 9th' | 'Major 9th' | 'Minor 9th'
+  | 'Dominant 11th' | 'Major 11th' | 'Minor 11th'
+  | 'Dominant 13th' | 'Major 13th' | 'Minor 13th'
+  // Altered
+  | 'Dominant 7th b5' | 'Dominant 7th #5' | 'Dominant 7th b9' | 'Dominant 7th #9' | 'Altered Dominant'
+  // Added
+  | 'add2' | 'add9' | 'add11' | 'Major 6th/9th'
+  // Special
+  | 'Quartal';
 
 export interface DrillSettings {
   level: number;
@@ -82,6 +99,42 @@ export interface TuningPreset {
   notes: TuningNote[];
 }
 
+// --- Chord Types ---
+export interface ChordDefinition {
+  name: ChordTypeName;
+  symbol: string;
+  formula: number[]; // semitones from root
+}
+
+export interface Chord {
+  root: Note;
+  name: string; // e.g., "C Major 7th" or a custom name
+  notes: Note[]; // Note names like 'C', 'E', 'G' for display
+  intervals: string[];
+}
+
+export interface UserChord {
+    id: string;
+    name: string;
+    notes: string[]; // Unique IDs like "C4", "E4", "G4" to preserve voicing
+}
+
+export interface InstanceState {
+  instrument: Instrument;
+  transpose: number;
+  octaveShift: number;
+  inversion: number;
+  voicing: VoicingType;
+  playbackStyle: 'arpeggio' | 'box';
+  playbackNoteDuration: '1/4' | '1/2' | '4/4';
+}
+
+export interface SuggestedChord {
+    name: string; // e.g., "G7"
+    root: Note;
+    type: ChordTypeName;
+}
+
 
 // --- User Data and Performance Tracking ---
 
@@ -107,6 +160,9 @@ export interface UserData {
   preDrillInfoSeen: Partial<Record<DrillMode, boolean>>;
   simonHighScore: number;
   hasCompletedTutorial: boolean;
+  userChords: UserChord[];
+  recentChords: string[]; // e.g., "C-Maj7"
+  isQuietMode: boolean;
 }
 
 export interface PerformanceUpdate {
