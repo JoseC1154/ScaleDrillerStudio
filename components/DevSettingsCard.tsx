@@ -1,11 +1,14 @@
 
+
 import React from 'react';
-import { DrillSettings, Note } from '../types';
+import { DrillSettings, Note, Language } from '../types';
 import PracticeKeySelector from './PracticeKeySelector';
+import { createTranslator } from '../services/translations';
 
 interface DevSettingsCardProps {
   settings: DrillSettings;
   onSettingChange: <K extends keyof DrillSettings>(key: K, value: DrillSettings[K]) => void;
+  language: Language;
 }
 
 const SliderControl: React.FC<{
@@ -33,7 +36,8 @@ const SliderControl: React.FC<{
   </div>
 );
 
-const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingChange }) => {
+const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingChange, language }) => {
+  const t = createTranslator(language);
   const handlePracticeKeyToggle = (keyToToggle: Note) => {
     const currentKeys = settings.practiceKeys || [];
     const isSelected = currentKeys.includes(keyToToggle);
@@ -50,35 +54,35 @@ const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingCh
   return (
     <div className="p-4 space-y-4">
         <SliderControl
-          label="BPM"
+          label={t('bpm')}
           value={settings.bpm}
           min={30}
           max={200}
           onChange={(v) => onSettingChange('bpm', v)}
         />
         <SliderControl
-          label="Question Count"
+          label={t('questionCount')}
           value={settings.questionCount}
           min={1}
           max={100}
           onChange={(v) => onSettingChange('questionCount', v)}
         />
         <SliderControl
-          label="Starting Beats"
+          label={t('startingBeats')}
           value={settings.totalBeats}
           min={5}
           max={100}
           onChange={(v) => onSettingChange('totalBeats', v)}
         />
         <SliderControl
-          label="Beat Award (on correct)"
+          label={t('beatAward')}
           value={settings.beatAward}
           min={0}
           max={20}
           onChange={(v) => onSettingChange('beatAward', v)}
         />
         <SliderControl
-          label="Beat Penalty (on incorrect)"
+          label={t('beatPenalty')}
           value={settings.beatPenalty}
           min={0}
           max={20}
@@ -87,9 +91,9 @@ const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingCh
         <div className="border-t border-stone-600 my-4" />
         <div>
             <label className="block text-sm font-medium text-stone-300 mb-2">
-                Practice Keys
+                {t('practiceKeys')}
             </label>
-            <p className="text-xs text-stone-400 font-normal mt-1 mb-2">Select specific keys to practice. Leave empty to use random keys for all modes.</p>
+            <p className="text-xs text-stone-400 font-normal mt-1 mb-2">{t('practiceKeysDesc')}</p>
             <PracticeKeySelector
                 selectedKeys={settings.practiceKeys}
                 onToggleKey={handlePracticeKeyToggle}
@@ -100,7 +104,7 @@ const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingCh
         <div>
             <div className="flex justify-between items-center">
                 <label htmlFor="piano-shuffle" className="text-stone-200 text-sm font-medium select-none">
-                    Piano Shuffle
+                    {t('pianoShuffle')}
                 </label>
                 <button
                     id="piano-shuffle"
@@ -111,7 +115,7 @@ const DevSettingsCard: React.FC<DevSettingsCardProps> = ({ settings, onSettingCh
                     <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${settings.pianoShuffle ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
             </div>
-            <p className="text-xs text-stone-400 font-normal mt-1">Randomize piano position before each question (Touch input only).</p>
+            <p className="text-xs text-stone-400 font-normal mt-1">{t('pianoShuffleDesc')}</p>
         </div>
     </div>
   );

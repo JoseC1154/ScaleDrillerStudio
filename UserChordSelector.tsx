@@ -8,7 +8,7 @@ import { addUserChord } from '../services/userData';
 import CustomChordBuilder from './CustomChordBuilder';
 import { Piano } from './Piano';
 import { ALL_NOTES } from '../constants';
-import { createTranslator, TKey } from '../services/translations';
+import { createTranslator } from '../services/translations';
 
 interface ChordLibraryPanelProps {
   userData: UserData;
@@ -75,12 +75,13 @@ const UserChordSelector: React.FC<ChordLibraryPanelProps> = ({
     }
   };
 
+  // Fix: Combined filtering logic into one useMemo hook and added explicit typing to fix inference issues.
   const groupedChords: Record<string, UserChord[]> = useMemo(() => {
     const allUserChords = userData.userChords || [];
 
     if (searchTerm.trim()) {
       return {
-        [t('searchResults')]: allUserChords.filter(chord =>
+        'Search Results': allUserChords.filter(chord =>
           chord.name.toLowerCase().includes(searchTerm.toLowerCase())
         )
       };
@@ -111,7 +112,7 @@ const UserChordSelector: React.FC<ChordLibraryPanelProps> = ({
     });
 
     return orderedGroups;
-  }, [userData.userChords, searchTerm, t]);
+  }, [userData.userChords, searchTerm]);
 
 
   if (isCreating) {
@@ -144,7 +145,7 @@ const UserChordSelector: React.FC<ChordLibraryPanelProps> = ({
         <header className="px-4 pt-4 pb-2 flex-shrink-0 border-b border-stone-800">
              <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-orange-400">{t('myChords')}</h2>
-                <button onClick={onClose} className="text-stone-400 hover:text-white" aria-label={t('guideClose')}>
+                <button onClick={onClose} className="text-stone-400 hover:text-white" aria-label="Close">
                     <CloseIcon className="h-6 w-6" />
                 </button>
             </div>
@@ -153,17 +154,17 @@ const UserChordSelector: React.FC<ChordLibraryPanelProps> = ({
                     type="text"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    placeholder={t('searchMyChords')}
+                    placeholder="Search my chords..."
                     className="w-full bg-stone-800 border border-stone-600 rounded-md px-3 py-2 text-white placeholder-stone-500 focus:ring-orange-500 focus:border-orange-500"
                 />
                 <button 
                     onClick={handleStartCreation}
                     disabled={instrument !== 'Piano'}
-                    title={instrument === 'Piano' ? t('createChordTooltip') : t('createChordDisabledTooltip')}
+                    title={instrument === 'Piano' ? "Create a new chord using the piano" : "Custom chords can only be created with the Piano instrument"}
                     className="flex-shrink-0 flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:bg-stone-600 disabled:cursor-not-allowed text-white text-sm font-semibold px-3 py-2 rounded-md transition-colors"
                 >
                     <PlusIcon className="h-5 w-5" />
-                    {t('new')}
+                    New
                 </button>
             </div>
         </header>
@@ -172,13 +173,12 @@ const UserChordSelector: React.FC<ChordLibraryPanelProps> = ({
             <section className="space-y-4">
                 {Object.keys(groupedChords).length === 0 ? (
                     <div className="text-center text-stone-400 py-4">
-                    <p>{searchTerm ? t('noChordsFound') : t('libraryEmpty')}</p>
-                    { instrument !== 'Piano' && <p className="mt-2 text-xs">{t('createOnPiano')}</p> }
+                    <p>{searchTerm ? 'No chords match your search.' : 'Your chord library is empty.'}</p>
                     </div>
                 ) : (
                     Object.entries(groupedChords).map(([root, chords]) => (
                         <div key={root}>
-                            <h4 className="text-xs font-bold uppercase text-stone-500 tracking-wider mb-2">{searchTerm ? root : `${root} ${t('chordsSuffix')}`}</h4>
+                            <h4 className="text-xs font-bold uppercase text-stone-500 tracking-wider mb-2">{searchTerm ? root : `${root} Chords`}</h4>
                             <div className="space-y-2">
                                 {chords.map(chord => {
                                     const isSelected = selectedChordIds.includes(chord.id);
@@ -195,7 +195,7 @@ const UserChordSelector: React.FC<ChordLibraryPanelProps> = ({
                                         <button
                                                 onClick={(e) => { e.stopPropagation(); onDelete(chord.id); }}
                                                 className="p-1.5 text-stone-500 hover:text-red-500 rounded-full hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                aria-label={t('deleteChordLabel', { name: chord.name })}
+                                                aria-label={`Delete ${chord.name}`}
                                             >
                                                 <TrashIcon className="h-5 w-5" />
                                             </button>

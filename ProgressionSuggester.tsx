@@ -47,9 +47,9 @@ const ProgressionSuggester: React.FC<ProgressionSuggesterProps> = ({ isOpen, onC
         <header className="p-4 border-b border-stone-700/50 flex justify-between items-center flex-shrink-0">
           <div className="flex items-center gap-2">
             <SparklesIcon className="h-6 w-6 text-orange-400" />
-            <h2 className="text-xl font-bold text-orange-400">{t('progressionSuggester')}</h2>
+            <h2 className="text-xl font-bold text-orange-400">Progression Suggester</h2>
           </div>
-          <button onClick={onClose} className="text-stone-400 hover:text-white" aria-label={t('guideClose')}>
+          <button onClick={onClose} className="text-stone-400 hover:text-white" aria-label="Close">
             <CloseIcon className="h-6 w-6" />
           </button>
         </header>
@@ -63,7 +63,7 @@ const ProgressionSuggester: React.FC<ProgressionSuggesterProps> = ({ isOpen, onC
           )}
           {error && (
             <div className="text-center text-red-400">
-              <p className="font-semibold">{t('errorOccurred')}</p>
+              <p className="font-semibold">An error occurred:</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           )}
@@ -87,13 +87,13 @@ const ProgressionSuggester: React.FC<ProgressionSuggesterProps> = ({ isOpen, onC
                 className="flex items-center gap-2 bg-stone-600 hover:bg-stone-500 text-white font-bold py-2 px-4 rounded-lg transition"
               >
                 <PlayIcon className="h-5 w-5" />
-                {t('play')}
+                Play
               </button>
               <button
                 onClick={() => onAddChords(suggestion)}
                 className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition"
               >
-                {t('addToWorkspace')}
+                Add to Workspace
               </button>
             </div>
           ) : (
@@ -102,7 +102,7 @@ const ProgressionSuggester: React.FC<ProgressionSuggesterProps> = ({ isOpen, onC
                     onClick={onClose}
                     className="bg-stone-600 hover:bg-stone-500 text-white font-bold py-2 px-4 rounded-lg transition"
                 >
-                    {isLoading ? t('cancel') : t('guideClose')}
+                    {isLoading ? 'Cancel' : t('guideClose')}
                 </button>
             </div>
            )}

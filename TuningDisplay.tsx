@@ -16,7 +16,7 @@ const TuningDisplay: React.FC<TuningDisplayProps> = ({ tunerResult, isAudible, l
     return (
       <div className="text-center font-sans">
         <div className="text-8xl font-bold text-stone-600 opacity-50">--</div>
-        <div className="text-lg text-stone-500">{t('playANote')}</div>
+        <div className="text-lg text-stone-500">Play a note</div>
       </div>
     );
   }
@@ -29,14 +29,14 @@ const TuningDisplay: React.FC<TuningDisplayProps> = ({ tunerResult, isAudible, l
 
   if (isAudible) {
     if (Math.abs(centsOff) <= inTuneThreshold) {
-      statusText = t('inTune');
+      statusText = 'In Tune';
       colorClass = 'text-green-400';
       pulseClass = 'animate-pulse';
     } else if (centsOff < 0) {
-      statusText = t('flat');
+      statusText = 'Flat';
       colorClass = 'text-red-400';
     } else {
-      statusText = t('sharp');
+      statusText = 'Sharp';
       colorClass = 'text-yellow-400';
     }
   }

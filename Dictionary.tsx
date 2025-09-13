@@ -8,7 +8,7 @@ import Fretboard from './Fretboard';
 import ChordInstanceToolbar from './ChordInstanceToolbar';
 import { CloseIcon, ChordIcon, SettingsIcon } from './Icons';
 import FeedbackBadge from './FeedbackBadge';
-import { createTranslator, TKey } from '../services/translations';
+import { createTranslator } from '../services/translations';
 
 const CHORD_GROUPS: Record<string, ChordTypeName[]> = {
     'Dyads': ['Power Chord', 'Perfect Fifth', 'Major Third Dyad', 'Minor Third Dyad'],
@@ -40,12 +40,12 @@ const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({ isOpen, onClose
                 <header className="px-4 pt-4 pb-2 flex-shrink-0 border-b border-stone-800">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-bold text-orange-400">{t('selectAChord')}</h2>
-                        <button onClick={onClose} className="text-stone-400 hover:text-white" aria-label={t('guideClose')}>
+                        <button onClick={onClose} className="text-stone-400 hover:text-white" aria-label="Close">
                             <CloseIcon className="h-6 w-6" />
                         </button>
                     </div>
                     <div className="mt-4">
-                        <label className="block text-sm font-medium text-stone-300 mb-2">{t('selectRootNote')}</label>
+                        <label className="block text-sm font-medium text-stone-300 mb-2">1. Select a Root Note</label>
                         <div className="grid grid-cols-6 gap-2">
                             {ALL_NOTES.map(note => (
                                 <button key={note} onClick={() => setSelectedRoot(note)} className={`py-2 px-1 rounded-md text-sm font-semibold transition-all duration-200 w-full border ${selectedRoot === note ? 'bg-orange-500 text-white border-orange-400 scale-110 shadow-lg' : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border-stone-700'}`}>
@@ -57,11 +57,11 @@ const ChordSelectorModal: React.FC<ChordSelectorModalProps> = ({ isOpen, onClose
                 </header>
 
                 <main className="flex-1 min-h-0 overflow-y-auto p-4">
-                    <label className="block text-sm font-medium text-stone-300 mb-2">{t('chooseChordType')}</label>
+                    <label className="block text-sm font-medium text-stone-300 mb-2">2. Choose a Chord Type</label>
                      <div className="space-y-3">
                         {Object.entries(CHORD_GROUPS).map(([groupName, chordTypes]) => (
                             <div key={groupName}>
-                                <h4 className="text-xs font-bold uppercase text-stone-500 tracking-wider mb-2">{t(groupName as TKey)}</h4>
+                                <h4 className="text-xs font-bold uppercase text-stone-500 tracking-wider mb-2">{groupName}</h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {(chordTypes as ChordTypeName[]).map(typeName => (
                                         <button
@@ -93,8 +93,7 @@ interface DictionaryProps {
   language: Language;
 }
 
-// FIX: Changed to a named export to resolve the "Module has no default export" error.
-export const Dictionary: React.FC<DictionaryProps> = ({ userData, onUserDataUpdate, language }) => {
+const Dictionary: React.FC<DictionaryProps> = ({ userData, onUserDataUpdate, language }) => {
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [activeChord, setActiveChord] = useState<{ root: Note, typeName: ChordTypeName } | null>(null);
   const [previewState, setPreviewState] = useState<InstanceState>({
@@ -138,7 +137,7 @@ export const Dictionary: React.FC<DictionaryProps> = ({ userData, onUserDataUpda
     if (newChordData) {
         const { newUserData } = addUserChord(userData, newChordData);
         onUserDataUpdate(newUserData);
-        setFeedbackMessage(t('chordAdded', { name }));
+        setFeedbackMessage(`'${name}' added to My Chords!`);
         setTimeout(() => setFeedbackMessage(null), 2000);
     }
   };
@@ -217,7 +216,6 @@ export const Dictionary: React.FC<DictionaryProps> = ({ userData, onUserDataUpda
                     playbackNoteDuration={previewState.playbackNoteDuration}
                     onPlaybackNoteDurationChange={(duration) => handleStateChange({ playbackNoteDuration: duration })}
                     onCenter={centerOnChord}
-                    language={language}
                 />
                 <div className="flex-1 min-h-0 min-w-0">{instrumentComponent}</div>
                 <footer className="flex-shrink-0 p-3 bg-black/30 flex flex-wrap gap-4 justify-between items-center">
@@ -226,7 +224,7 @@ export const Dictionary: React.FC<DictionaryProps> = ({ userData, onUserDataUpda
                         <p className="text-sm text-stone-400">Notes: {fullChord.notes.join(', ')}</p>
                     </div>
                     <button onClick={handleAddChordToLibrary} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">
-                        {t('addChord')}
+                        Add to My Chords
                     </button>
                 </footer>
             </>
@@ -249,3 +247,4 @@ export const Dictionary: React.FC<DictionaryProps> = ({ userData, onUserDataUpda
     </div>
   );
 };
+export default Dictionary;

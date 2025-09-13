@@ -1,20 +1,22 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { DEFAULT_DRILL_SETTINGS, LEVEL_MODES } from './constants';
-import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, InstanceState } from './types';
+import { DrillSettings as DrillSettingsType, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, ActiveView, InstanceState, Language } from './types';
 import { loadUserData, saveUserData, updatePerformanceStat } from './services/userData';
 import { Settings } from './components/Settings';
 import Drill from './components/Quiz';
 import InputTester from './components/InputTester';
-import GlobalSettingsModal from './components/GlobalSettingsModal';
+import MenuView from './components/MenuView';
 import InfoModal from './components/InfoModal';
 import PerformanceModal from './components/PerformanceModal';
 import BottomNavBar from './components/BottomNavBar';
 import Tuner from './components/Tuner';
 import InteractiveGuide from './components/InteractiveGuide';
 import ChordWorkspace from './components/ChordWorkspace';
-import Dictionary from './components/Dictionary';
+// FIX: Changed to a named import to resolve the "Module has no default export" error.
+import { Dictionary } from './components/Dictionary';
 import { useDevice } from './hooks/useDevice';
-import { getAudioContext } from './services/sound';
+import { getAudioContext, playUIClick, playDrillSuccess, playLevelUpSound } from './services/sound';
+import { createTranslator } from './services/translations';
 
 type AppState = 'settings' | 'drill' | 'input_tester';
 
@@ -30,8 +32,9 @@ const getDrillRules = (mode: DrillMode): Partial<DrillSettingsType> => {
 
   switch (mode) {
     case 'Key Conjurer':
-      // The new L1 gatekeeper. Educational, reveal all 12 notes.
-      return { questionCount: 12, totalBeats: 999, bpm: 0, beatAward: 0, beatPenalty: 0 };
+      // This is now a standard survival drill. Master all 12 notes before beats run out.
+      // Question count is 1 because it manages its own loop.
+      return { ...baseRules, questionCount: 1, totalBeats: 40 };
     case 'Note Professor':
       // A relaxed, educational mode. No time pressure.
       return { questionCount: 12, totalBeats: 999, bpm: 40, beatAward: 0, beatPenalty: 0 };
@@ -84,7 +87,6 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<DrillSettingsType>(DEFAULT_DRILL_SETTINGS);
   const [activeDrillSettings, setActiveDrillSettings] = useState<DrillSettingsType | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(!!document.fullscreenElement);
-  const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<ActiveView>('drill');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState(true);
@@ -92,10 +94,15 @@ const App: React.FC = () => {
   const [selectedChordIds, setSelectedChordIds] = useState<string[]>([]);
   const [instanceStates, setInstanceStates] = useState<Record<string, InstanceState>>({});
   const deviceType = useDevice();
+  const [language, setLanguage] = useState<Language>('en');
+  const t = createTranslator(language);
+
 
   useEffect(() => {
     const loadedData = loadUserData();
     setUserData(loadedData);
+    setLanguage(loadedData.language || 'en');
+    setSettings(prev => ({ ...prev, language: loadedData.language || 'en' }));
     // if (!loadedData.hasCompletedTutorial) { ... }
   }, []);
 
@@ -139,6 +146,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleStartDrill = useCallback(() => {
+    playUIClick();
     if (!userData || isTutorialActive) return;
     if (!isDevModeUnlocked && !userData.unlockedModes.includes(settings.drillMode)) return;
 
@@ -157,20 +165,19 @@ const App: React.FC = () => {
 
 
   const handleStartInputTester = useCallback(() => {
+    playUIClick();
     setAppState('input_tester');
     setActiveView('drill');
   }, []);
 
-  const handleStartInputTesterAndCloseModal = useCallback(() => {
-    handleStartInputTester();
-    setIsGlobalSettingsOpen(false);
-  }, [handleStartInputTester]);
-
   const handleQuit = useCallback(() => {
+    playUIClick();
     setAppState('settings');
+    setActiveView('drill'); // Always return to drill settings screen on quit
   }, []);
 
   const handleFullScreenToggle = useCallback(() => {
+    playUIClick();
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
         console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
@@ -206,10 +213,12 @@ const App: React.FC = () => {
     });
   }, []);
 
-  const handleToggleQuietMode = useCallback(() => {
+  const handleLanguageChange = useCallback((newLanguage: Language) => {
+    setLanguage(newLanguage);
+    setSettings(prev => ({ ...prev, language: newLanguage }));
     setUserData(prevData => {
         if (!prevData) return null;
-        const newData = { ...prevData, isQuietMode: !prevData.isQuietMode };
+        const newData = { ...prevData, language: newLanguage };
         saveUserData(newData);
         return newData;
     });
@@ -217,6 +226,9 @@ const App: React.FC = () => {
 
 
   const handleDrillComplete = useCallback((result: DrillCompletionResult) => {
+    if (result.success) {
+      playDrillSuccess();
+    }
     setUserData(prevData => {
         if (!prevData) return null;
 
@@ -248,6 +260,7 @@ const App: React.FC = () => {
             }
 
             if (leveledUp) {
+                playLevelUpSound();
                 const modesForNewLevel: DrillMode[] = (LEVEL_MODES[nextLevel] || []).map(m => m.mode);
                 const newUnlockedModes: DrillMode[] = Array.from(new Set([...newData.unlockedModes, ...modesForNewLevel]));
                 
@@ -256,14 +269,14 @@ const App: React.FC = () => {
                     unlockedLevel: nextLevel,
                     unlockedModes: newUnlockedModes,
                 };
-                alert(`Congratulations! You've unlocked Level ${nextLevel}!`);
+                alert(t('levelUp', { level: nextLevel }));
             }
         }
 
         saveUserData(newData);
         return newData;
     });
-  }, []);
+  }, [t]);
 
   const handleTutorialComplete = useCallback(() => {
     setIsTutorialActive(false);
@@ -285,25 +298,17 @@ const App: React.FC = () => {
 
   const onViewChange = useCallback((view: ActiveView) => {
     setActiveView(currentView => {
-        // When switching away from a modal view, return to the drill
-        if (['report', 'guide', 'tuner', 'chord', 'dictionary'].includes(currentView)) {
-            if (view === currentView) { // if tapping the active icon
-                return 'drill'; // go back to drill
-            } else {
-                return view;
-            }
-        } else {
-            return view;
+        // If tapping the active icon of a "modal-like" view, toggle it off by returning to the drill view.
+        if (view === currentView && ['report', 'guide', 'tuner', 'chord', 'dictionary', 'menu'].includes(view)) {
+            return 'drill';
         }
+        // Otherwise, switch to the new view.
+        return view;
     });
   }, []);
 
-  const handleMenuNavigation = useCallback((view: ActiveView) => {
-      setActiveView(view);
-      setIsGlobalSettingsOpen(false); // Close modal after navigation
-  }, []);
-
   const handleStartTutorial = useCallback(() => {
+    playUIClick();
     // Close the info modal first by setting view back to the main screen
     onViewChange('guide');
     // Start the tutorial after a short delay to allow the modal to animate out
@@ -314,16 +319,16 @@ const App: React.FC = () => {
 
 
   const renderDrillContent = () => {
-    if (!userData) return <div className="text-center">Loading user data...</div>;
+    if (!userData) return <div className="text-center">{t('loading')}</div>;
 
     switch (appState) {
       case 'drill':
-        return <Drill settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} isQuietMode={userData.isQuietMode} />;
+        return <Drill settings={activeDrillSettings!} onQuit={handleQuit} userData={userData} onUpdatePerformance={handlePerformanceUpdate} onDrillComplete={handleDrillComplete} onToggleSkipPreDrillInfo={handleToggleSkipPreDrillInfo} />;
       case 'input_tester':
-        return <InputTester settings={settings} onQuit={handleQuit} onSettingChange={handleSettingChange} isQuietMode={userData.isQuietMode} />;
+        return <InputTester settings={settings} onQuit={handleQuit} onSettingChange={handleSettingChange} language={language} />;
       case 'settings':
       default:
-        return <Settings settings={settings} onSettingChange={handleSettingChange} onStartDrill={handleStartDrill} userData={userData} isDevModeUnlocked={isDevModeUnlocked} onDevModeToggle={handleDevModeToggle} />;
+        return <Settings settings={settings} onSettingChange={handleSettingChange} onStartDrill={handleStartDrill} userData={userData} isDevModeUnlocked={isDevModeUnlocked} onDevModeToggle={handleDevModeToggle} language={language} />;
     }
   };
 
@@ -337,55 +342,55 @@ const App: React.FC = () => {
           {showHeader && (
               <header className="text-center mb-4 sm:mb-8 flex-shrink-0 pt-8">
               <h1 className="text-4xl sm:text-5xl font-bold text-orange-400 tracking-tighter drop-shadow-lg">
-                  Scale Driller
+                  {t('scaleDriller')}
               </h1>
               <p className="text-stone-300 mt-1 sm:mt-2 text-base sm:text-lg">
-                  Your personal music theory trainer.
+                  {t('personalTrainer')}
               </p>
               </header>
           )}
           
           <div className={`w-full flex-1 flex items-center justify-center min-h-0`}>
               {activeView === 'drill' && renderDrillContent()}
-              {activeView === 'tuner' && <Tuner settings={settings} onSettingChange={handleSettingChange} />}
+              {activeView === 'tuner' && <Tuner settings={settings} onSettingChange={handleSettingChange} language={language} />}
               {activeView === 'chord' && userData && <ChordWorkspace 
                   settings={settings} 
                   userData={userData} 
                   onUserDataUpdate={handleUserDataUpdate} 
-                  isQuietMode={userData.isQuietMode}
+                  language={language}
                   selectedChordIds={selectedChordIds}
                   setSelectedChordIds={setSelectedChordIds}
                   instanceStates={instanceStates}
                   setInstanceStates={setInstanceStates}
               />}
-              {activeView === 'dictionary' && userData && <Dictionary userData={userData} onUserDataUpdate={handleUserDataUpdate} />}
+              {activeView === 'dictionary' && userData && <Dictionary userData={userData} onUserDataUpdate={handleUserDataUpdate} language={language} />}
+              {activeView === 'menu' && (
+                <MenuView
+                    onNavigate={onViewChange}
+                    onStartInputTester={handleStartInputTester}
+                    onToggleFullscreen={handleFullScreenToggle}
+                    isFullScreen={isFullScreen}
+                    deviceType={deviceType}
+                    settings={settings}
+                    onSettingChange={handleSettingChange}
+                    language={language}
+                    onLanguageChange={handleLanguageChange}
+                />
+              )}
           </div>
         </main>
       </div>
 
-      <BottomNavBar activeView={activeView} onViewChange={onViewChange} onMenuClick={() => setIsGlobalSettingsOpen(true)} id="tutorial-bottom-nav" />
+      <BottomNavBar activeView={activeView} onViewChange={onViewChange} id="tutorial-bottom-nav" language={language} />
 
-      <GlobalSettingsModal
-        isOpen={isGlobalSettingsOpen}
-        onClose={() => setIsGlobalSettingsOpen(false)}
-        onNavigate={handleMenuNavigation}
-        onStartInputTester={handleStartInputTesterAndCloseModal}
-        onToggleFullscreen={handleFullScreenToggle}
-        isFullScreen={isFullScreen}
-        deviceType={deviceType}
-        settings={settings}
-        onSettingChange={handleSettingChange}
-        isQuietMode={userData?.isQuietMode ?? false}
-        onToggleQuietMode={handleToggleQuietMode}
-      />
-
-      {isTutorialActive && <InteractiveGuide onComplete={handleTutorialComplete} />}
+      {isTutorialActive && <InteractiveGuide onComplete={handleTutorialComplete} language={language} />}
 
       {activeView === 'guide' && (
         <InfoModal
             isOpen={true}
             onClose={() => onViewChange('guide')}
             onStartTutorial={handleStartTutorial}
+            language={language}
         />
       )}
       {activeView === 'report' && (
@@ -393,6 +398,7 @@ const App: React.FC = () => {
             isOpen={true}
             onClose={() => onViewChange('report')}
             userData={userData}
+            language={language}
         />
       )}
     </div>

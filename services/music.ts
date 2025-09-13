@@ -172,15 +172,16 @@ export const generateDrillQuestions = (
   };
   
   if (drillMode === 'Key Conjurer') {
-    const notesToIdentify = shuffleArray([...ALL_NOTES]);
-    return notesToIdentify.slice(0, questionCount).map((note, i) => ({
-      id: i,
-      prompt: "What note is this?",
-      correctAnswers: [note],
-      key: 'C', // Not relevant, but required by type
+    // This adaptive drill manages its own question flow internally.
+    // We only need a single placeholder question to initialize the component.
+    return [{
+      id: 0,
+      prompt: `Get ready...`,
+      correctAnswers: [ALL_NOTES[0]],
+      key: 'C',
       scaleType: 'Major',
       drillMode: 'Key Conjurer',
-    }));
+    }];
   }
 
   if (drillMode === 'Note Professor') {

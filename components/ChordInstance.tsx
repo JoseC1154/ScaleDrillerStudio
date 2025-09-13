@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { UserChord, InstanceState } from '../types';
+import { UserChord, InstanceState, Language } from '../types';
 import { Piano } from './Piano';
 import Fretboard from './Fretboard';
 import ChordInstanceToolbar from './ChordInstanceToolbar';
@@ -14,9 +14,10 @@ interface ChordInstanceProps {
   voicedMidi: number[];
   color: string;
   isCurrentlyPlaying: boolean;
+  language: Language;
 }
 
-const ChordInstance: React.FC<ChordInstanceProps> = ({ chord, state, onStateChange, onDelete, onPlayInstance, voicedMidi, color, isCurrentlyPlaying }) => {
+const ChordInstance: React.FC<ChordInstanceProps> = ({ chord, state, onStateChange, onDelete, onPlayInstance, voicedMidi, color, isCurrentlyPlaying, language }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const centroid = useMemo(() => getChordCentroid(voicedMidi), [voicedMidi]);
 
@@ -126,6 +127,7 @@ const ChordInstance: React.FC<ChordInstanceProps> = ({ chord, state, onStateChan
              onCenter={centerOnChord}
              onPlay={onPlayInstance}
              onDelete={onDelete}
+             language={language}
            />
        </footer>
     </div>

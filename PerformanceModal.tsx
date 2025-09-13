@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { UserData, PerformanceStat, Language } from '../types';
 import { MUSIC_KEYS, SCALE_TYPES, DEGREE_NAMES, INTERVAL_NAMES, CHORD_TYPES } from '../constants';
@@ -34,7 +33,6 @@ const PerformanceModal: React.FC<PerformanceModalProps> = ({ isOpen, onClose, us
   const t = createTranslator(language);
   if (!isOpen || !userData) return null;
   const { performance } = userData;
-  const attemptsText = t('attempts');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -49,41 +47,41 @@ const PerformanceModal: React.FC<PerformanceModalProps> = ({ isOpen, onClose, us
         </header>
 
         <main className="overflow-y-auto p-6 space-y-6">
-          <p className="text-stone-400">{t('reportDesc')}</p>
+          <p className="text-stone-400">This report shows your accuracy on different musical concepts. The app will use this data to give you more practice on your weak spots!</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             <section>
-              <h3 className="text-xl font-bold text-orange-400 mb-3">{t('byKey')}</h3>
+              <h3 className="text-xl font-bold text-orange-400 mb-3">By Key</h3>
               <div className="space-y-2">
                 {MUSIC_KEYS.map(key => (
-                  <StatRow key={key} label={key} stat={performance.byKey[key]} attemptsText={attemptsText} />
+                  <StatRow key={key} label={key} stat={performance.byKey[key]} attemptsText="attempts" />
                 ))}
               </div>
             </section>
             
             <section>
-              <h3 className="text-xl font-bold text-orange-400 mb-3">{t('byScaleDegree')}</h3>
+              <h3 className="text-xl font-bold text-orange-400 mb-3">By Scale Degree</h3>
                <div className="space-y-2">
                 {Object.keys(DEGREE_NAMES).map(d => parseInt(d,10)).map(degree => (
-                  <StatRow key={degree} label={`${DEGREE_NAMES[degree]} Degree`} stat={performance.byDegree[degree]} attemptsText={attemptsText} />
+                  <StatRow key={degree} label={`${DEGREE_NAMES[degree]} Degree`} stat={performance.byDegree[degree]} attemptsText="attempts" />
                 ))}
               </div>
-               <h3 className="text-xl font-bold text-orange-400 mb-3 mt-6">{t('byScaleAndChord')}</h3>
+               <h3 className="text-xl font-bold text-orange-400 mb-3 mt-6">By Scale & Chord Type</h3>
                <div className="space-y-2">
                 {SCALE_TYPES.map(type => (
-                  <StatRow key={type} label={type} stat={performance.byScale[type]} attemptsText={attemptsText} />
+                  <StatRow key={type} label={type} stat={performance.byScale[type]} attemptsText="attempts" />
                 ))}
                 {CHORD_TYPES.map(type => (
-                  <StatRow key={type} label={`${type} ${t('chord')}`} stat={performance.byChord[type]} attemptsText={attemptsText} />
+                  <StatRow key={type} label={`${type} Chord`} stat={performance.byChord[type]} attemptsText="attempts" />
                 ))}
               </div>
             </section>
             
             <section>
-                <h3 className="text-xl font-bold text-orange-400 mb-3">{t('byInterval')}</h3>
+                <h3 className="text-xl font-bold text-orange-400 mb-3">By Interval</h3>
                  <div className="space-y-2">
                     {INTERVAL_NAMES.map(name => (
-                        <StatRow key={name} label={name} stat={performance.byInterval[name]} attemptsText={attemptsText} />
+                        <StatRow key={name} label={name} stat={performance.byInterval[name]} attemptsText="attempts" />
                     ))}
                 </div>
             </section>

@@ -91,6 +91,7 @@ const Fretboard: React.FC<FretboardProps> = ({ instrument, onNotePlayed, highlig
                                     const uniqueFretId = `${noteInfo.note}-${stringIndex}-${fretNum}`;
                                     const isActiveFret = activeNotes ? activeNotes.includes(uniqueFretId) : true;
                                     const isCorrectFret = correctUniqueIds.has(uniqueFretId) || correctNoteNames.has(noteInfo.note);
+                                    const isIncorrectKey = incorrectNote ? (/\d/.test(incorrectNote) || incorrectNote.includes('-') ? incorrectNote === uniqueFretId : incorrectNote === noteInfo.note) : false;
                                     const isHighlightedFret = highlightedUniqueIds.has(uniqueFretId) || highlightedNoteNames.has(noteInfo.note);
                                     const isMineFret = mineNotes.includes(uniqueFretId);
                                     const isRevealedFret = revealedNoteNames?.has(noteInfo.note) ?? false;
@@ -106,7 +107,7 @@ const Fretboard: React.FC<FretboardProps> = ({ instrument, onNotePlayed, highlig
                                                 uniqueFretId={uniqueFretId}
                                                 isHighlighted={isHighlightedFret}
                                                 isCorrect={isCorrectFret}
-                                                isIncorrect={incorrectNote === uniqueFretId}
+                                                isIncorrect={isIncorrectKey}
                                                 onClick={(e) => onNotePlayed(uniqueFretId, e)}
                                                 showInlay={stringIndex === inlayStringIndex && fretMarkers.includes(fretNum)}
                                                 labelMode={labelMode}

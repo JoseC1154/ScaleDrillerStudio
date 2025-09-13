@@ -1,13 +1,11 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CloseIcon, TouchIcon, MidiIcon, MicIcon, PianoIcon, GuitarIcon, BassIcon, TunerIcon, ReportIcon, InfoIcon, EnterFullscreenIcon, ExitFullscreenIcon } from './Icons';
+import { TouchIcon, MidiIcon, MicIcon, PianoIcon, GuitarIcon, BassIcon, TunerIcon, ReportIcon, InfoIcon, EnterFullscreenIcon, ExitFullscreenIcon } from './Icons';
 import { ActiveView, DeviceType, DrillSettings, InputMethod, Instrument, Handedness, Language } from '../types';
 import { createTranslator } from '../services/translations';
 
-interface GlobalSettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface MenuViewProps {
   onNavigate: (view: ActiveView) => void;
   onStartInputTester: () => void;
   onToggleFullscreen: () => void;
@@ -42,7 +40,7 @@ const MenuButton: React.FC<{ onClick: () => void, children: React.ReactNode }> =
 );
 
 
-const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClose, onNavigate, onStartInputTester, onToggleFullscreen, isFullScreen, deviceType, settings, onSettingChange, language, onLanguageChange }) => {
+const MenuView: React.FC<MenuViewProps> = ({ onNavigate, onStartInputTester, onToggleFullscreen, isFullScreen, deviceType, settings, onSettingChange, language, onLanguageChange }) => {
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [devicesError, setDevicesError] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionState | 'idle' | 'unavailable' | 'prompt' | 'error'>('idle');
@@ -81,7 +79,7 @@ const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClo
   }, [onSettingChange, settings.audioInputDeviceId, t]);
 
   useEffect(() => {
-    if (isOpen && settings.inputMethod === 'Mic') {
+    if (settings.inputMethod === 'Mic') {
         if (navigator.permissions?.query) {
             navigator.permissions.query({ name: 'microphone' as PermissionName }).then(status => {
                 setPermissionStatus(status.state);
@@ -101,21 +99,15 @@ const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClo
             enumerateAndSetDevices();
         }
     }
-  }, [isOpen, settings.inputMethod, enumerateAndSetDevices]);
+  }, [settings.inputMethod, enumerateAndSetDevices]);
   
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-stone-900 border border-stone-700 rounded-lg max-w-md w-full shadow-2xl flex flex-col max-h-[calc(100vh-3rem)]" onClick={e => e.stopPropagation()}>
-        <header className="p-6 flex justify-between items-center flex-shrink-0 border-b border-stone-800">
+    <div className="bg-stone-900/70 backdrop-blur-lg border border-stone-700/50 p-4 sm:p-6 rounded-xl shadow-2xl w-full max-w-lg mx-auto h-full flex flex-col">
+        <header className="pb-4 flex justify-between items-center flex-shrink-0 border-b border-stone-800">
             <h2 className="text-2xl font-bold text-orange-400">{t('menuAndSettings')}</h2>
-            <button onClick={onClose} className="text-stone-400 hover:text-white">
-                <CloseIcon className="h-6 w-6" />
-            </button>
         </header>
 
-        <main className="overflow-y-auto p-6 space-y-6">
+        <main className="overflow-y-auto mt-4 pr-2 space-y-6">
             <section id="navigation" className="space-y-2">
                 <h3 className="text-lg font-semibold text-stone-200 mb-2">{t('navigation')}</h3>
                 <MenuButton onClick={() => onNavigate('tuner')}><TunerIcon className="h-5 w-5 text-orange-400" /> {t('tuner')}</MenuButton>
@@ -210,8 +202,7 @@ const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ isOpen, onClo
             </section>
         </main>
       </div>
-    </div>
   );
 };
 
-export default GlobalSettingsModal;
+export default MenuView;

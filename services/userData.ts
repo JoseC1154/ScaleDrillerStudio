@@ -1,11 +1,11 @@
-import { UserData, PerformanceStat, MusicKey, ScaleType, PerformanceUpdate, DrillMode, UserChord } from '../types';
+import { UserData, PerformanceStat, MusicKey, ScaleType, PerformanceUpdate, DrillMode, UserChord, Language } from '../types';
 
 const USER_DATA_KEY = 'scale-driller-userData';
 
 export const getInitialUserData = (): UserData => ({
   unlockedLevel: 1,
   isKeySelectionUnlocked: false,
-  unlockedModes: ['Key Conjurer'], // Start with only Key Conjurer unlocked
+  unlockedModes: ['Key Conjurer', 'Note Professor'], // Start with Level 1 drills unlocked
   performance: {
     byKey: {},
     byScale: {},
@@ -24,7 +24,7 @@ export const getInitialUserData = (): UserData => ({
     { id: 'seed-fsm7b5e', name: 'F#m7b5/E', notes: ['E3', 'F#3', 'A3', 'C4'] },
   ],
   recentChords: [],
-  isQuietMode: false,
+  language: 'en',
 });
 
 export const loadUserData = (): UserData => {
@@ -72,7 +72,7 @@ export const loadUserData = (): UserData => {
         hasCompletedTutorial: parsedData.hasCompletedTutorial || false,
         userChords: parsedData.userChords || [],
         recentChords: parsedData.recentChords || [],
-        isQuietMode: parsedData.isQuietMode || false,
+        language: parsedData.language || 'en',
       };
 
       // If a returning user has no chords, give them the seed data.

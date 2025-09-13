@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, memo, forwardRef } from 'react';
 import { Note, Scale, DrillMode, QuizPhase } from '../types';
 import { XMarkIcon } from './Icons';
@@ -83,7 +82,7 @@ const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isH
   else if (isFlashing) baseClassOverride = '!bg-red-400 text-black';
   else if (hasMultiColor) baseClassOverride = 'text-black';
   else if (!useLiveGlowEffect && isHighlighted) baseClassOverride = '!bg-orange-400 text-black';
-  else if (isRevealed) baseClassOverride = isBlack ? '!bg-sky-800 text-white' : '!bg-sky-200 text-black';
+  else if (isRevealed) baseClassOverride = isBlack ? '!bg-purple-800 text-white' : '!bg-purple-300 text-black';
   else if (isPlaceholder) baseClassOverride = isBlack ? 'bg-stone-900 border border-black' : 'bg-black';
   else baseClassOverride = isBlack ? 'bg-gray-800 text-white border border-black' : 'bg-gray-100 text-black';
 
@@ -131,13 +130,19 @@ const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ note, isBlack, isH
   if (quizPhase === 'pre-round-animation') labelAnimationClass = 'animate-note-fall';
   else if (isSacrificed) labelAnimationClass = 'animate-note-sacrifice-fall';
   
-  if (drillMode === 'Key Conjurer' || drillMode === 'Degree Dash' || quizPhase === 'pre-round-animation' || isSacrificed) {
+  if (drillMode === 'Degree Dash' || quizPhase === 'pre-round-animation' || isSacrificed) {
     shouldShowLabel = !!isRevealed || !!customLabel;
     if (isRevealed || customLabel) {
         showOctaveNumber = note === 'C' && octave !== undefined && drillMode !== 'Degree Dash';
     } else {
         showOctaveNumber = false;
     }
+  }
+
+  if (drillMode === 'Key Conjurer') {
+    // In this mode, labels are shown for revealed notes (hints or earned)
+    shouldShowLabel = isRevealed;
+    showOctaveNumber = false; // Keep it clean
   }
 
   const getFontSize = () => {

@@ -83,6 +83,7 @@ export const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [
         {pianoKeys.map(({ note, octave, uniqueKey }) => {
           const isCorrect = correctUniqueIds.has(uniqueKey) || correctNoteNames.has(note);
           const isHighlighted = highlightedUniqueIds.has(uniqueKey) || highlightedNoteNames.has(note);
+          const isIncorrectKey = incorrectNote ? (/\d/.test(incorrectNote) ? incorrectNote === uniqueKey : incorrectNote === note) : false;
           const isActive = activeNotes ? activeNotes.includes(uniqueKey) : true;
           const isJustRevealed = justRevealedNotes?.includes(uniqueKey);
           const isMine = mineNotes.includes(uniqueKey);
@@ -98,7 +99,7 @@ export const Piano: React.FC<PianoProps> = ({ onNotePlayed, highlightedNotes = [
               isBlack={note.includes('b') || note.includes('#')}
               isHighlighted={isHighlighted}
               isCorrect={isCorrect}
-              isIncorrect={incorrectNote === uniqueKey}
+              isIncorrect={isIncorrectKey}
               onClick={(note, e) => onNotePlayed(note, e)}
               octave={octave}
               labelMode={labelMode}

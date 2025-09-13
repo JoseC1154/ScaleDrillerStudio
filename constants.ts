@@ -15,6 +15,15 @@ export const SCALE_FORMULAS: Record<ScaleType, number[]> = {
   Minor: [2, 1, 2, 2, 1, 2, 2], // W-H-W-W-H-W-W
 };
 
+// Map of enharmonic equivalents for answer checking.
+export const ENHARMONIC_PAIRS: Record<string, string[]> = {
+    'Db': ['C#'], 'C#': ['Db'],
+    'Eb': ['D#'], 'D#': ['Eb'],
+    'Gb': ['F#'], 'F#': ['Gb'],
+    'Ab': ['G#'], 'G#': ['Ab'],
+    'Bb': ['A#'], 'A#': ['Bb'],
+};
+
 // Standard tuning from thinnest string to thickest
 export const GUITAR_TUNING: Note[] = ['E', 'B', 'G', 'D', 'A', 'E'];
 export const BASS_TUNING: Note[] = ['G', 'D', 'A', 'E'];
@@ -62,7 +71,7 @@ export const DEFAULT_DRILL_SETTINGS: DrillSettings = {
   instrument: 'Piano',
   handedness: 'Right',
   bpm: 70,
-  practiceKeys: ['C'],
+  practiceKeys: [],
   practiceDegrees: [1, 2, 3, 4, 5, 6, 7],
   totalBeats: 30,
   beatAward: 5,
@@ -74,6 +83,7 @@ export const DEFAULT_DRILL_SETTINGS: DrillSettings = {
   audioInputDeviceId: null,
   questionCount: 40,
   pianoShuffle: true,
+  language: 'en',
 };
 
 export const INTERVALS: { [name: string]: number } = {
@@ -169,34 +179,34 @@ export const LEVEL_KEYS: { [level: number]: MusicKey[] } = {
   5: MUSIC_KEYS,
 };
 
-export const LEVEL_MODES: { [level: number]: { mode: DrillMode, name: string }[] } = {
+export const LEVEL_MODES: { [level: number]: { mode: DrillMode }[] } = {
   1: [
-    { mode: 'Key Conjurer', name: 'Note Discovery' },
-    { mode: 'Galaxy Constructor', name: 'Galaxy Builder' },
-    { mode: 'Degree Dash', name: 'Degree Dash' },
+    { mode: 'Note Professor' },
+    { mode: 'Key Conjurer' },
   ],
   2: [
-    { mode: 'Note Professor', name: 'Note Professor' },
-    { mode: 'Simon Memory Game', name: 'Simon Game' },
-    { mode: 'Key Notes', name: 'Key Notes' },
-    { mode: 'Scale Detective', name: 'Detective'},
-    { mode: 'Practice', name: 'Practice' },
-    { mode: 'Time Attack', name: 'Time Attack' },
-    { mode: 'BPM Challenge', name: 'BPM' },
-    { mode: 'Nashville Numbers', name: 'Nashville' },
-    { mode: 'Degree Training', name: 'Degrees' },
+    { mode: 'Galaxy Constructor' },
+    { mode: 'Degree Dash' },
+    { mode: 'Scale Detective' },
   ],
   3: [
-    { mode: 'Intervals', name: 'Intervals' }, 
-    { mode: 'Chord Builder', name: 'Chords' },
-    { mode: 'ScaleSweeper', name: 'Scale Sweeper' },
-    { mode: 'Degree Dash Pro', name: 'Degree Dash Pro' }
+    { mode: 'Simon Memory Game' },
+    { mode: 'Key Notes' },
+    { mode: 'Time Attack' },
+    { mode: 'BPM Challenge' },
+    { mode: 'Practice' },
+    { mode: 'ScaleSweeper' },
   ],
   4: [
-    { mode: 'Randomizer Roulette', name: 'Roulette' }
+    { mode: 'Intervals' }, 
+    { mode: 'Chord Builder' },
+    { mode: 'Degree Dash Pro' },
+    { mode: 'Nashville Numbers' },
+    { mode: 'Degree Training' },
+    { mode: 'Randomizer Roulette' }
   ],
   5: [
-      { mode: 'BPM Roulette', name: 'BPM Roulette' }
+      { mode: 'BPM Roulette' }
   ]
 };
 

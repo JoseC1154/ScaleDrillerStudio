@@ -45,6 +45,7 @@ export const suggestChordProgression = async (
 
     try {
         const response = await ai.models.generateContent({
+            // FIX: Updated deprecated 'gemini-1.5-flash' to the recommended 'gemini-2.5-flash' model.
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {

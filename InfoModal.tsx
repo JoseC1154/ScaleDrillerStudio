@@ -114,31 +114,25 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, onStartTutorial,
           <Section title={t('guideSection3Title')}>
             <h4 className="text-lg font-semibold text-stone-200">{t('guideLvl1')}</h4>
             <ModeDesc title={t('Key Conjurer')} language={language} gatekeeper>{t('descKeyConjurer')}</ModeDesc>
-            <ModeDesc title={t('Note Professor')} language={language}>{t('descNoteProfessor')}</ModeDesc>
-            
-            <h4 className="text-lg font-semibold text-stone-200 mt-6">{t('guideLvl2')}</h4>
             <ModeDesc title={t('Galaxy Constructor')} language={language}>{t('descGalaxyConstructor')}</ModeDesc>
             <ModeDesc title={t('Degree Dash')} language={language}>{t('descDegreeDash')}</ModeDesc>
+            
+            <h4 className="text-lg font-semibold text-stone-200 mt-6">{t('guideLvl2')}</h4>
+            <ModeDesc title={t('Note Professor')} language={language}>{t('descNoteProfessor')}</ModeDesc>
+            <ModeDesc title={t('Simon Memory Game')} language={language}>{t('descSimonMemory')}</ModeDesc>
+            <ModeDesc title={t('Key Notes')} language={language}>{t('descKeyNotes')}</ModeDesc>
             <ModeDesc title={t('Scale Detective')} language={language} gatekeeper>{t('descScaleDetective')}</ModeDesc>
 
             <h4 className="text-lg font-semibold text-stone-200 mt-6">{t('guideLvl3')}</h4>
-            <ModeDesc title={t('Simon Memory Game')} language={language}>{t('descSimonMemory')}</ModeDesc>
-            <ModeDesc title={t('Key Notes')} language={language}>{t('descKeyNotes')}</ModeDesc>
-            <ModeDesc title={t('Time Attack')} language={language}>{t('descTimeAttack')}</ModeDesc>
-            <ModeDesc title={t('BPM Challenge')} language={language}>{t('descBPMChallenge')}</ModeDesc>
-            <ModeDesc title={t('Practice')} language={language}>{t('descPractice')}</ModeDesc>
+            <ModeDesc title={`${t('Intervals')} & ${t('Chord Builder')}`} language={language}>{t('descKeyNotes')}</ModeDesc>
+            <ModeDesc title={t('Degree Dash Pro')} language={language}>{t('descDegreeDashPro')}</ModeDesc>
             <ModeDesc title={t('ScaleSweeper')} language={language} gatekeeper>{t('descScaleSweeper')}</ModeDesc>
             
             <h4 className="text-lg font-semibold text-stone-200 mt-6">{t('guideLvl4')}</h4>
-            <ModeDesc title={t('Intervals')} language={language}>{t('descIntervals')}</ModeDesc>
-            <ModeDesc title={t('Chord Builder')} language={language}>{t('descChordBuilder')}</ModeDesc>
-            <ModeDesc title={t('Degree Dash Pro')} language={language}>{t('descDegreeDashPro')}</ModeDesc>
-            <ModeDesc title={t('Nashville Numbers')} language={language}>{t('descNashvilleNumbers')}</ModeDesc>
-            <ModeDesc title={t('Degree Training')} language={language}>{t('descDegreeTraining')}</ModeDesc>
             <ModeDesc title={t('Randomizer Roulette')} language={language} gatekeeper>{t('descRandomizerRoulette')}</ModeDesc>
             
             <h4 className="text-lg font-semibold text-stone-200 mt-6">{t('guideLvl5')}</h4>
-            <ModeDesc title={t('BPM Roulette')} language={language}>{t('descBPMRoulette')}</ModeDesc>
+            <ModeDesc title={t('BPM Roulette')} language={language}>{t('descDefault')}</ModeDesc>
           </Section>
         </div>
         

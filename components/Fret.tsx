@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, memo, forwardRef } from 'react';
 import { Note, Scale, DrillMode, QuizPhase } from '../types';
 import { XMarkIcon } from './Icons';
@@ -93,7 +92,7 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
     } else if (isHighlighted && !useLiveGlow) {
         stateClasses = '!bg-orange-400 !text-black shadow-lg transform scale-105 ring-2 ring-orange-600';
     } else if (isRevealed) {
-        stateClasses = '!bg-sky-700 !text-white shadow-sm';
+        stateClasses = '!bg-purple-700 !text-white shadow-sm';
     } else if (isDimmed) {
         stateClasses = 'bg-transparent text-transparent opacity-40';
     } else if (isPlaceholder) {
@@ -120,8 +119,11 @@ const Fret = forwardRef<HTMLButtonElement, FretProps>(({ note, fretNum, uniqueFr
     else if (isSacrificed) labelAnimationClass = 'animate-note-sacrifice-fall';
 
     let shouldShowContent = !isPlaceholder || customLabel || isMine || isCorrect || isRevealed;
-    if (drillMode === 'Key Conjurer' || drillMode === 'Degree Dash' || quizPhase === 'pre-round-animation' || isSacrificed) {
+    if (drillMode === 'Degree Dash' || quizPhase === 'pre-round-animation' || isSacrificed) {
         shouldShowContent = !!isRevealed || !!customLabel;
+    } else if (drillMode === 'Key Conjurer') {
+        // In this mode, labels are shown for revealed notes (hints or earned)
+        shouldShowContent = isRevealed;
     }
 
     const singleInlayClasses = `absolute bg-gray-200 bg-opacity-40 rounded-full z-0 ${isSmall ? 'w-1.5 h-1.5 sm:w-2 sm:h-2' : 'w-2 h-2 sm:w-2.5 sm:h-2.5'}`;

@@ -21,7 +21,7 @@ const CustomChordBuilder: React.FC<CustomChordBuilderProps> = ({ name, notes, on
   const t = createTranslator(language);
 
   const detectedName = detectedChord 
-    ? `${detectedChord.root} ${detectedChord.typeName}`
+    ? `${detectedChord.root} ${detectedChord.typeName}` 
     : (notes.length > 1 ? t('unknownChord') : '');
 
   return (

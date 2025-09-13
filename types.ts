@@ -8,13 +8,14 @@ export type DrillMode = 'Key Conjurer' | 'Note Professor' | 'Practice' | 'Time A
 export type InputMethod = 'Touch' | 'MIDI' | 'Mic';
 export type Instrument = 'Piano' | 'Guitar' | 'Bass';
 export type Handedness = 'Right' | 'Left';
-export type ActiveView = 'drill' | 'report' | 'guide' | 'tuner' | 'chord' | 'dictionary';
+export type ActiveView = 'drill' | 'report' | 'guide' | 'tuner' | 'chord' | 'dictionary' | 'menu';
 export type SweeperPhase = 'discovery' | 'time_attack' | 'intermission';
 export type DegreeDashPhase = 'fill_in' | 'timed_finale' | 'intermission';
 export type DeviceType = 'mobile' | 'desktop';
 export type NoteDiscoveryRound = 1 | 2 | 3 | 4 | 5;
-export type QuizPhase = 'loading' | 'info' | 'countdown' | 'active' | 'animation' | 'intermission' | 'pre-round-animation';
+export type QuizPhase = 'loading' | 'info' | 'countdown' | 'active' | 'animation' | 'intermission' | 'pre-round-animation' | 'finished' | 'transition';
 export type VoicingType = 'close' | 'spread' | 'open';
+export type Language = 'en' | 'es';
 
 export type ChordTypeName =
   // Dyads
@@ -59,6 +60,7 @@ export interface DrillSettings {
   audioInputDeviceId: string | null;
   questionCount: number; // Added to standardize drill length
   pianoShuffle: boolean;
+  language: Language;
 }
 
 export interface Scale {
@@ -162,7 +164,7 @@ export interface UserData {
   hasCompletedTutorial: boolean;
   userChords: UserChord[];
   recentChords: string[]; // e.g., "C-Maj7"
-  isQuietMode: boolean;
+  language: Language;
 }
 
 export interface PerformanceUpdate {

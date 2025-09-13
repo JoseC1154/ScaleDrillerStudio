@@ -330,8 +330,8 @@ const ChordWorkspace: React.FC<ChordWorkspaceProps> = ({
                       <button
                           onClick={() => handleGlobalTranspose(-1)}
                           className="p-2 rounded-md bg-stone-700 hover:bg-stone-600 text-white"
-                          aria-label={t('transposeDown')}
-                          title={t('transposeDown')}
+                          aria-label="Global Transpose Down"
+                          title="Global Transpose Down"
                       >
                           <ChevronLeftIcon className="h-5 w-5" />
                       </button>
@@ -339,8 +339,8 @@ const ChordWorkspace: React.FC<ChordWorkspaceProps> = ({
                       <button
                           onClick={() => handleGlobalTranspose(1)}
                           className="p-2 rounded-md bg-stone-700 hover:bg-stone-600 text-white"
-                          aria-label={t('transposeUp')}
-                          title={t('transposeUp')}
+                          aria-label="Global Transpose Up"
+                          title="Global Transpose Up"
                       >
                           <ChevronRightIcon className="h-5 w-5" />
                       </button>
@@ -356,7 +356,7 @@ const ChordWorkspace: React.FC<ChordWorkspaceProps> = ({
               <button
                   onClick={handleSuggestClick}
                   disabled={isSuggestionLoading || selectedChords.length === 0}
-                  title={selectedChords.length === 0 ? t('suggestTooltipDisabled') : t('suggestTooltip')}
+                  title={selectedChords.length === 0 ? "Select a chord first to get suggestions" : "Suggest a chord progression"}
                   className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-stone-600 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg transition-colors"
               >
                   <SparklesIcon className="h-5 w-5" />
@@ -402,7 +402,6 @@ const ChordWorkspace: React.FC<ChordWorkspaceProps> = ({
                   voicedMidi={allVoicedMidis.get(chord.id) || []}
                   color={chordColorMap.get(chord.id) || '#ffffff'}
                   isCurrentlyPlaying={playingChordId === chord.id}
-                  language={language}
                 />
               ))}
             </div>
