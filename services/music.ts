@@ -1,5 +1,6 @@
-import { ALL_NOTES, BASS_TUNING, GUITAR_TUNING, SCALE_FORMULAS, DEGREE_NAMES, MUSIC_KEYS, NASHVILLE_DEGREE_NAMES, INTERVALS, INTERVAL_NAMES, CHORD_TYPES, CHORD_FORMULAS, SCALE_TYPES, CHORD_DEFINITIONS, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES, CHORD_TYPE_NAMES } from '../constants';
-import { Note, MusicKey, ScaleType, Scale, Question, FretboardNote, DrillSettings, PerformanceData, DrillMode, TuningNote, Key, ChordDefinition, Chord, ChordTypeName, VoicingType, Instrument, UserChord } from '../types';
+import { ALL_NOTES, BASS_TUNING, GUITAR_TUNING, SCALE_FORMULAS, MUSIC_KEYS, INTERVALS, INTERVAL_NAMES, CHORD_TYPES, CHORD_FORMULAS, SCALE_TYPES, CHORD_DEFINITIONS, GUITAR_STANDARD_TUNING_NOTES, BASS_STANDARD_TUNING_NOTES, CHORD_TYPE_NAMES } from '../constants';
+import { Note, MusicKey, ScaleType, Scale, Question, FretboardNote, DrillSettings, PerformanceData, DrillMode, TuningNote, Key, ChordDefinition, Chord, ChordTypeName, VoicingType, Instrument, UserChord, Language } from '../types';
+import { createTranslator, TKey } from './translations';
 
 export const getNoteIndex = (note: Note): number => ALL_NOTES.indexOf(note);
 
@@ -100,62 +101,31 @@ const getWeightedRandom = <T,>(items: T[], performanceData: Record<string | numb
     return items[items.length - 1]; // Fallback
 };
 
-const noteAnecdotes: Record<Note, string[]> = {
-    'C': [
-        "C is often the first note musicians learn. On a piano, find the white key just to the left of any group of two black keys.",
-        "This is Middle C, the center of the piano and the anchor for musical notation. A truly foundational note!"
-    ],
-    'Db': [
-        "This is D-flat, also known as C-sharp. It's the black key between C and D. It adds a bit of spice, doesn't it?",
-        "Fun fact: The key of D-flat Major is a favorite of composers like Chopin for its warm, rich sound on the piano."
-    ],
-    'D': [
-        "This is D. It sits right between the two black keys. A very common and strong-sounding note.",
-        "The note D is often associated with triumph and celebration. Many fanfares and royal marches start on D!"
-    ],
-    'Eb': [
-        "E-flat, or D-sharp. This black key has a soulful, bluesy feel. Find it between D and E.",
-        "Mozart's famous Symphony No. 39 is in E-flat major, showcasing its noble and grand character."
-    ],
-    'E': [
-        "Here's E, the white key to the right of the two-black-key group. It has a bright, clear sound.",
-        "The lowest note on a standard-tuned guitar is E. It's a cornerstone of rock and folk music."
-    ],
-    'F': [
-        "Let's find F. It's the white key just to the left of the group of three black keys. A great landmark!",
-        "The French Horn, a majestic orchestral instrument, is naturally pitched in the key of F."
-    ],
-    'F#': [
-        "F-sharp, also called G-flat. It's the first black key in the group of three. It can sound mysterious or exciting.",
-        "Many dramatic film scores use the key of F-sharp minor to create a sense of tension and adventure."
-    ],
-    'G': [
-        "This is G, nestled between the first two black keys of the three-key group. A very versatile note.",
-        "The 'G-clef' or treble clef, which most melodies are written in, curls around the G line on the musical staff."
-    ],
-    'Ab': [
-        "A-flat, or G-sharp. The middle black key in the group of three. It has a dark, romantic quality.",
-        "Beethoven's famous 'Pathétique' Sonata begins with a powerful, somber chord in a key that heavily features A-flat."
-    ],
-    'A': [
-        "Here is A. It's found between the second and third black keys of the three-key group.",
-        "Orchestras all tune to the note A (specifically A4 at 440 Hz) before a performance to ensure everyone is playing in harmony."
-    ],
-    'Bb': [
-        "B-flat, or A-sharp. The last black key in the group of three. It's a staple in jazz and blues music.",
-        "Many wind instruments, like the clarinet and trumpet, are 'B-flat instruments', meaning a written C for them sounds like a B-flat."
-    ],
-    'B': [
-        "And finally, B. The white key to the very right of the three-black-key group, right before the next C.",
-        "The note B is often used to create a feeling of suspense or longing, as it's just one half-step away from resolving to C."
-    ]
+const getNoteAnecdotes = (language: Language): Record<Note, string[]> => {
+    const t = createTranslator(language);
+    return {
+        'C':  [t('anecdoteC1'), t('anecdoteC2')],
+        'Db': [t('anecdoteDb1'), t('anecdoteDb2')],
+        'D':  [t('anecdoteD1'), t('anecdoteD2')],
+        'Eb': [t('anecdoteEb1'), t('anecdoteEb2')],
+        'E':  [t('anecdoteE1'), t('anecdoteE2')],
+        'F':  [t('anecdoteF1'), t('anecdoteF2')],
+        'F#': [t('anecdoteF#1'), t('anecdoteF#2')],
+        'G':  [t('anecdoteG1'), t('anecdoteG2')],
+        'Ab': [t('anecdoteAb1'), t('anecdoteAb2')],
+        'A':  [t('anecdoteA1'), t('anecdoteA2')],
+        'Bb': [t('anecdoteBb1'), t('anecdoteBb2')],
+        'B':  [t('anecdoteB1'), t('anecdoteB2')]
+    };
 };
 
+
 export const generateDrillQuestions = (
-  settings: Pick<DrillSettings, 'key' | 'scaleType' | 'drillMode' | 'practiceKeys' | 'practiceDegrees' | 'questionCount'>,
+  settings: Pick<DrillSettings, 'key' | 'scaleType' | 'drillMode' | 'practiceKeys' | 'practiceDegrees' | 'questionCount' | 'language'>,
   performance?: PerformanceData
 ): Question[] => {
-  const { drillMode, questionCount } = settings;
+  const { drillMode, questionCount, language } = settings;
+  const t = createTranslator(language);
   
   const keysToUse: MusicKey[] = (settings.practiceKeys && settings.practiceKeys.length > 0 
       ? settings.practiceKeys
@@ -164,7 +134,6 @@ export const generateDrillQuestions = (
   const isPracticeMode = ['Practice', 'Nashville Numbers', 'Degree Training', 'Intervals', 'Chord Builder', 'Galaxy Constructor'].includes(drillMode);
 
   const getRandomKey = (): MusicKey => {
-      if (settings.key && settings.key !== 'Random') return settings.key;
       if (isPracticeMode && performance) {
           return getWeightedRandom(keysToUse, performance.byKey, k => k);
       }
@@ -176,7 +145,7 @@ export const generateDrillQuestions = (
     // We only need a single placeholder question to initialize the component.
     return [{
       id: 0,
-      prompt: `Get ready...`,
+      prompt: t('keyConjurerPrompt'),
       correctAnswers: [ALL_NOTES[0]],
       key: 'C',
       scaleType: 'Major',
@@ -186,19 +155,20 @@ export const generateDrillQuestions = (
 
   if (drillMode === 'Note Professor') {
     const questions: Question[] = [];
-    const notesToTeach = ALL_NOTES; // Teach in chromatic order C, Db, D...
+    const notesToTeach = ALL_NOTES;
+    const anecdotes = getNoteAnecdotes(language);
 
     for (let i = 0; i < notesToTeach.length; i++) {
         const note = notesToTeach[i];
-        const anecdotes = noteAnecdotes[note];
-        const anecdote = anecdotes[Math.floor(Math.random() * anecdotes.length)];
+        const noteAnecdotes = anecdotes[note];
+        const anecdote = noteAnecdotes[Math.floor(Math.random() * noteAnecdotes.length)];
         
         questions.push({
             id: i,
-            prompt: `Professor says: "${anecdote}" Now, find a ${note}.`,
+            prompt: t('noteProfessorPrompt', { anecdote, note }),
             correctAnswers: [note],
-            key: 'C', // Not relevant, but required by type
-            scaleType: 'Major', // Not relevant
+            key: 'C',
+            scaleType: 'Major',
             drillMode: 'Note Professor',
         });
     }
@@ -212,7 +182,7 @@ export const generateDrillQuestions = (
         
         return [{
             id: 0,
-            prompt: `Sweep for the ${questionKey} ${scaleType} scale`,
+            prompt: t('scaleSweeperPrompt', { key: questionKey, scaleType }),
             correctAnswers: scale.notes,
             key: questionKey,
             scaleType,
@@ -227,7 +197,7 @@ export const generateDrillQuestions = (
       
       return [{
           id: 0,
-          prompt: `Memorize the sequence from ${questionKey} ${scaleType}`,
+          prompt: t('simonGamePrompt', { key: questionKey, scaleType }),
           correctAnswers: scale.notes,
           key: questionKey,
           scaleType,
@@ -237,7 +207,12 @@ export const generateDrillQuestions = (
     const questions: Question[] = [];
     for (let i = 0; i < questionCount; i++) {
       let questionKey: MusicKey;
-      if (settings.key && settings.key !== 'Random') {
+      
+      // If practiceKeys is populated from the dev settings, it should ALWAYS be the source for random keys.
+      // The specific 'key' setting is only used if practiceKeys is empty.
+      if (settings.practiceKeys && settings.practiceKeys.length > 0) {
+        questionKey = getRandomKey();
+      } else if (settings.key && settings.key !== 'Random') {
         questionKey = settings.key;
       } else {
         questionKey = getRandomKey();
@@ -263,7 +238,7 @@ export const generateDrillQuestions = (
           const scale = getScale(questionKey, scaleType);
           question = {
             id: i,
-            prompt: `Find all notes in ${questionKey} ${scaleType}`,
+            prompt: t('keyNotesPrompt', { key: questionKey, scaleType }),
             correctAnswers: scale.notes,
             key: questionKey,
             scaleType,
@@ -275,7 +250,7 @@ export const generateDrillQuestions = (
             const scale = getScale(questionKey, scaleType);
             question = {
                 id: i,
-                prompt: `Construct the ${questionKey} ${scaleType} Galaxy`,
+                prompt: t('galaxyConstructorPrompt', { key: questionKey, scaleType }),
                 correctAnswers: scale.notes,
                 key: questionKey,
                 scaleType,
@@ -292,7 +267,7 @@ export const generateDrillQuestions = (
 
           question = {
             id: i,
-            prompt: `Build the ${rootNote} ${chordType} chord`,
+            prompt: t('chordBuilderPrompt', { rootNote, chordType }),
             correctAnswers: chordNotes,
             key: rootNote,
             scaleType,
@@ -310,7 +285,7 @@ export const generateDrillQuestions = (
 
           question = {
               id: i,
-              prompt: 'Find the missing note in the scale.',
+              prompt: t('scaleDetectivePrompt'),
               correctAnswers: [missingNote],
               contextNotes: contextNotes,
               key: questionKey,
@@ -325,10 +300,11 @@ export const generateDrillQuestions = (
           const semitones = INTERVALS[intervalName];
           const rootIndex = getNoteIndex(rootNote);
           const intervalNote = getNoteFromIndex(rootIndex + semitones);
+          const translatedIntervalName = t(intervalName as TKey);
 
           question = {
             id: i,
-            prompt: `Play the ${intervalName} of ${rootNote}`,
+            prompt: t('intervalsPrompt', { intervalName: translatedIntervalName, rootNote }),
             correctAnswers: [intervalNote],
             key: rootNote,
             scaleType,
@@ -350,10 +326,13 @@ export const generateDrillQuestions = (
 
           let promptText: string;
           if (currentDrillMode === 'Nashville Numbers') {
-              const degreeName = NASHVILLE_DEGREE_NAMES[scaleType][degree];
-              promptText = `Play the ${degreeName} of ${questionKey} ${scaleType}`;
+              const nashvilleMap: any = { Minor: { 3: 'b3', 6: 'b6', 7: 'b7' } };
+              const specialName = nashvilleMap[scaleType]?.[degree];
+              const degreeName = specialName ? t(specialName as TKey) : String(degree);
+              promptText = t('nashvilleNumbersPrompt', { degreeName, key: questionKey, scaleType });
           } else { // Catches Practice, Degree Training, Degree Dash, Degree Dash Pro
-              promptText = `Play the ${DEGREE_NAMES[degree]} of ${questionKey} ${scaleType}`;
+              const degreeName = t(`degree${degree}` as TKey);
+              promptText = t('degreeTrainingPrompt', { degreeName, key: questionKey, scaleType });
           }
 
           question = {

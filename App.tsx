@@ -240,6 +240,13 @@ const App: React.FC = () => {
         }
 
         if (result.success) {
+            // Unlock "Note Discovery" (Key Conjurer) after mastering "Note Professor"
+            if (result.drillMode === 'Note Professor' && !newData.unlockedModes.includes('Key Conjurer')) {
+                const newUnlockedModes: DrillMode[] = Array.from(new Set([...newData.unlockedModes, 'Key Conjurer']));
+                newData = { ...newData, unlockedModes: newUnlockedModes };
+                alert(t('unlockedNoteDiscovery'));
+            }
+
             const currentUnlockedLevel = newData.unlockedLevel;
             let nextLevel = currentUnlockedLevel;
             let leveledUp = false;

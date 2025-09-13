@@ -19,7 +19,7 @@ const getModeInfo = (mode: DrillMode, t: (key: TKey, replacements?: Record<strin
 };
 
 
-const EnhancedKeyboardIntroVisualization = () => {
+const EnhancedKeyboardIntroVisualization = ({ t }: { t: (key: TKey) => string }) => {
     return (
       <div className="bg-stone-800 p-4 rounded-lg my-4 overflow-x-auto">
         <div className="relative h-40 w-full min-w-[400px] mx-auto flex select-none mt-6">
@@ -49,11 +49,11 @@ const EnhancedKeyboardIntroVisualization = () => {
 
           {/* Group Annotations */}
           <div className="absolute -top-6 left-[10%] w-[22%] text-center">
-            <div className="text-xs text-cyan-300">Group of 2</div>
+            <div className="text-xs text-cyan-300">{t('preQuizVizGroup2')}</div>
             <div className="h-2 border-l border-r border-b border-cyan-300 mx-2"></div>
           </div>
           <div className="absolute -top-6 left-[53%] w-[36%] text-center">
-            <div className="text-xs text-lime-300">Group of 3</div>
+            <div className="text-xs text-lime-300">{t('preQuizVizGroup3')}</div>
             <div className="h-2 border-l border-r border-b border-lime-300 mx-2"></div>
           </div>
 
@@ -65,7 +65,7 @@ const EnhancedKeyboardIntroVisualization = () => {
                   <path d="M 85 40 L 95 50 L 85 60" stroke="#f97316" fill="none" strokeWidth="8" strokeLinecap="round"/>
               </svg>
               <p className="text-xs font-bold text-orange-300 whitespace-nowrap mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                1 step = half-step
+                {t('preQuizViz1Step')}
               </p>
           </div>
           
@@ -76,7 +76,7 @@ const EnhancedKeyboardIntroVisualization = () => {
                   <path d="M 85 40 L 95 50 L 85 60" stroke="#fbbf24" fill="none" strokeWidth="8" strokeLinecap="round"/>
               </svg>
               <p className="text-xs font-bold text-amber-300 whitespace-nowrap mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                2 steps = whole-step
+                {t('preQuizViz2Steps')}
               </p>
           </div>
         </div>
@@ -98,39 +98,53 @@ const PreQuizInfo: React.FC<PreQuizInfoProps> = ({ drillMode, onReady, onSkipCha
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div className="bg-stone-900 border border-stone-700 rounded-xl p-6 max-w-lg w-full text-center shadow-2xl max-h-[90vh] flex flex-col">
-          <h2 className="text-3xl font-bold text-orange-400 mb-4">Your Musical Map: The Piano</h2>
+          <h2 className="text-3xl font-bold text-orange-400 mb-4">{t('preQuizKeyConjurerTitle')}</h2>
           
           <div className="overflow-y-auto pr-4 text-left space-y-4 text-stone-300 text-sm sm:text-base">
       
             <div>
-              <h3 className="font-bold text-orange-300 text-lg mb-2">1. The Piano as a Map</h3>
-              <p>The white keys are like flat land or roads—smooth, open, and easy to travel. The black keys are like mountains or signposts—they rise up and help you navigate. This “land and mountain” landscape repeats over and over across the keyboard.</p>
+              <h3 className="font-bold text-orange-300 text-lg mb-2">{t('preQuizKeyConjurerSection1Title')}</h3>
+              <p>{t('preQuizKeyConjurerSection1Text')}</p>
             </div>
 
             <div>
-              <h3 className="font-bold text-orange-300 text-lg mb-2">2. The 2–3 Pattern of Black Keys</h3>
-              <p>The black keys appear in groups: first 2 mountains, then 3 mountains, then it repeats. These repeating groups are like landmarks on a map. Wherever you are, spotting a “2–3” pattern tells you exactly where you’ve landed.</p>
+              <h3 className="font-bold text-orange-300 text-lg mb-2">{t('preQuizKeyConjurerSection2Title')}</h3>
+              <p>{t('preQuizKeyConjurerSection2Text')}</p>
             </div>
 
             <div>
-              <h3 className="font-bold text-orange-300 text-lg mb-2">3. Steps and Distance</h3>
-              <p>Think of each move to the next key (black or white) as <b className="text-white">1 step</b> of distance. Musicians call this a <b className="text-white">half-step</b>. Two steps (skipping a key in between) are called a <b className="text-white">whole step</b>. The piano is both a map and a ruler: you can count steps to measure distance between any two notes.</p>
+              <h3 className="font-bold text-orange-300 text-lg mb-2">{t('preQuizKeyConjurerSection3Title')}</h3>
+              <p>
+                {t('preQuizKeyConjurerSection3Text1')}
+                <b className="text-white">{t('preQuizKeyConjurerSection3_1step')}</b>
+                {t('preQuizKeyConjurerSection3Text2')}
+                <b className="text-white">{t('preQuizKeyConjurerSection3_halfStep')}</b>
+                {t('preQuizKeyConjurerSection3Text3')}
+                <b className="text-white">{t('preQuizKeyConjurerSection3_wholeStep')}</b>
+                {t('preQuizKeyConjurerSection3Text4')}
+              </p>
             </div>
             
             <div>
-              <h3 className="font-bold text-orange-300 text-lg mb-2">4. Names of the Keys</h3>
-              <p>The white keys are named after the letters A through G. The black keys get their names from the white keys next to them:</p>
+              <h3 className="font-bold text-orange-300 text-lg mb-2">{t('preQuizKeyConjurerSection4Title')}</h3>
+              <p>{t('preQuizKeyConjurerSection4Text')}</p>
               <ul className="list-disc list-inside mt-2 space-y-1 text-stone-400">
-                  <li>If you move up a step, the black key is a <b className="text-white">sharp (♯)</b>.</li>
-                  <li>If you move down a step, the same black key is a <b className="text-white">flat (♭)</b>.</li>
+                  <li>
+                    {t('preQuizKeyConjurerSection4ListItem1_1')}
+                    <b className="text-white">{t('preQuizKeyConjurerSection4_sharp')}</b>.
+                  </li>
+                  <li>
+                    {t('preQuizKeyConjurerSection4ListItem2_1')}
+                    <b className="text-white">{t('preQuizKeyConjurerSection4_flat')}</b>.
+                  </li>
               </ul>
-              <p className="mt-2">Example: the black key between C and D can be called C♯ (C sharp) or D♭ (D flat). This means one key can have two names!</p>
+              <p className="mt-2">{t('preQuizKeyConjurerSection4Example')}</p>
             </div>
             
-            <EnhancedKeyboardIntroVisualization />
+            <EnhancedKeyboardIntroVisualization t={t} />
 
             <p className="font-semibold text-orange-200 italic !my-4 text-center">
-              “The piano is your musical map: white keys are the land, black keys are the mountains, and every step measures distance. With sharps and flats marking the peaks, you’ll never lose your way.”
+              {t('preQuizKeyConjurerQuote')}
             </p>
           </div>
           

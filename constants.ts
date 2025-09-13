@@ -1,5 +1,6 @@
 
 
+
 import { Note, Key, MusicKey, ScaleType, DrillSettings, DrillMode, TuningNote, TuningPreset, ChordTypeName, ChordDefinition } from './types';
 
 export const ALL_NOTES: Note[] = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -27,40 +28,6 @@ export const ENHARMONIC_PAIRS: Record<string, string[]> = {
 // Standard tuning from thinnest string to thickest
 export const GUITAR_TUNING: Note[] = ['E', 'B', 'G', 'D', 'A', 'E'];
 export const BASS_TUNING: Note[] = ['G', 'D', 'A', 'E'];
-
-export const DEGREE_NAMES: { [key: number]: string } = {
-  1: '1st',
-  2: '2nd',
-  3: '3rd',
-  4: '4th',
-  5: '5th',
-  6: '6th',
-  7: '7th',
-};
-
-export const NASHVILLE_DEGREE_NAMES: {
-  Major: { [key: number]: string };
-  Minor: { [key: number]: string };
-} = {
-  Major: {
-    1: '1',
-    2: '2',
-    3: '3',
-    4: '4',
-    5: '5',
-    6: '6',
-    7: '7',
-  },
-  Minor: {
-    1: '1',
-    2: '2',
-    3: 'b3',
-    4: '4',
-    5: '5',
-    6: 'b6',
-    7: 'b7',
-  },
-};
 
 export const DEFAULT_DRILL_SETTINGS: DrillSettings = {
   level: 1,
@@ -104,6 +71,17 @@ export const INTERVAL_NAMES = Object.keys(INTERVALS);
 export const INTERVAL_STEP_NAMES: Record<string, 'Whole' | 'Half'> = {
     'Minor 2nd': 'Half',
     'Major 2nd': 'Whole',
+};
+
+// FIX: Added DEGREE_NAMES export to fix import error in PerformanceModal.
+export const DEGREE_NAMES: { [degree: number]: string } = {
+  1: '1st',
+  2: '2nd',
+  3: '3rd',
+  4: '4th',
+  5: '5th',
+  6: '6th',
+  7: '7th',
 };
 
 export const CHORD_TYPES: ('Major' | 'Minor')[] = ['Major', 'Minor'];

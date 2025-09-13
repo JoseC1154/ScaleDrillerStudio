@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DrillSettings, Note, Question, Scale, MusicKey, UserData, PerformanceUpdate, DrillMode, DrillCompletionResult, SweeperPhase, NoteDiscoveryRound, ScaleType, QuizPhase, DegreeDashPhase, Language } from '../types';
-import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale } from '../services/music';
+import { generateDrillQuestions, getScale, getUniqueAnswersForQuestion, getFretboardNotes, getDegreeFromNote, getIntervalSequenceForScale, getNoteFromIndex, getNoteIndex, noteIdToMidi, midiToNoteId } from '../services/music';
 import { useMidi } from '../hooks/useMidi';
 import { useAudioPitch } from '../hooks/useAudioPitch';
 import { Piano } from './Piano';
 import Fretboard from './Fretboard';
 import HelpModal from './HelpModal';
-import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, DEGREE_NAMES, INTERVAL_NAMES, SCALE_TYPES, INTERVAL_STEP_NAMES } from '../constants';
+import { MUSIC_KEYS, ALL_NOTES, GUITAR_TUNING, BASS_TUNING, INTERVAL_NAMES, SCALE_TYPES, INTERVAL_STEP_NAMES, CHORD_FORMULAS } from '../constants';
 import PreQuizInfo from './PreQuizInfo';
 import Countdown from './Countdown';
 import { playNoteSound, playCorrectSound, playIncorrectSound, playBeatSound, playUIClick } from '../services/sound';
@@ -252,22 +252,22 @@ const KeyConjurerDrill: React.FC<DrillComponentProps> = ({ settings, onUpdatePer
             <header className="grid grid-cols-3 items-center text-stone-300 flex-shrink-0">
                 <div className="flex items-center gap-4">
                      <div className={`text-2xl sm:text-3xl font-bold relative ${beats <= 10 ? 'text-red-500 animate-pulse' : 'text-orange-400'}`}>
-                        {beats}<span className="text-sm sm:text-base font-normal text-stone-400 ml-1">Beats</span>
+                        {beats}<span className="text-sm sm:text-base font-normal text-stone-400 ml-1">{t('beats')}</span>
                         {scoreChange && <span key={scoreChange.id} className={`absolute -top-6 right-0 text-xl sm:text-2xl font-bold animate-float-up ${scoreChange.value > 0 ? 'text-green-400' : 'text-red-500'}`}>{scoreChange.value > 0 ? `+${scoreChange.value}` : scoreChange.value}</span>}
                     </div>
                 </div>
 
                 <div className="text-center space-y-1">
-                    <div className="font-bold text-lg text-stone-100">Level {level}</div>
+                    <div className="font-bold text-lg text-stone-100">{t('level')} {level}</div>
                     <div className={`text-xs h-4 ${levelUpAnimation ? 'animate-level-up text-yellow-300 font-bold' : ''}`}>
-                        {levelUpAnimation ? 'Level Up!' : `${mastered.size}/12 Mastered`}
+                        {levelUpAnimation ? t('levelUp') : `${mastered.size}/12 ${t('masteredSuffix')}`}
                     </div>
                 </div>
 
                 <div className="flex justify-end items-center gap-4">
                      <div className="text-center">
                         <div className="font-bold text-lg sm:text-xl text-fuchsia-400">{currentBpm}</div>
-                        <div className="text-xs">BPM</div>
+                        <div className="text-xs">{t('bpm')}</div>
                     </div>
                     <button onClick={() => { onQuit(); playUIClick(); }} title="Quit" className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"><QuitIcon className="h-5 w-5" /></button>
                 </div>
@@ -280,10 +280,10 @@ const KeyConjurerDrill: React.FC<DrillComponentProps> = ({ settings, onUpdatePer
                 </div>
                 <div className="question-panel flex flex-col gap-4 lg:w-1/3 lg:max-w-sm lg:order-2">
                     <div className="prompt-container text-center p-4 rounded-lg bg-black/30 flex-1 flex flex-col justify-center">
-                        <p className="text-2xl font-semibold text-stone-100">What note is this?</p>
+                        <p className="text-2xl font-semibold text-stone-100">{t('whatIsThisNote')}</p>
                         <div className="text-xs text-stone-400 mt-4 space-y-2">
-                            <p>Correct answers add beats. Wrong answers subtract them.</p>
-                            <p>Goal: Master all 12 notes to level up. Beat Level 10 to win!</p>
+                            <p>{t('keyConjurerHelp1')}</p>
+                            <p>{t('keyConjurerHelp2')}</p>
                         </div>
                     </div>
                      <div className="actions-container grid grid-cols-2 gap-2">
@@ -306,47 +306,63 @@ const KeyConjurerDrill: React.FC<DrillComponentProps> = ({ settings, onUpdatePer
 
 
 /**
- * NoteProfessorDrill: A guided lesson where the correct note is highlighted.
+ * NoteProfessorDrill: A guided, single-note identification lesson.
  */
 const NoteProfessorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdatePerformance, handleFinish, questions, currentQuestion, goToNextQuestion, onQuit }) => {
-    const [incorrectNoteFeedback, setIncorrectNoteFeedback] = useState<string | null>(null);
-    const [correctNoteFeedback, setCorrectNoteFeedback] = useState<string | null>(null);
+    const [feedbackNote, setFeedbackNote] = useState<string | null>(null);
+    const [isIncorrect, setIsIncorrect] = useState(false);
     const { playNote, stopNote } = useSustainedNote(settings.instrument);
     const t = createTranslator(settings.language);
 
+    const correctAnswers = useMemo(() => {
+        const rootNote = currentQuestion.correctAnswers[0] as Note;
+        if (settings.instrument === 'Piano') {
+            // Provide a specific octave for the piano
+            return [`${rootNote}4`]; 
+        }
+        // For fretboard instruments, the note name itself is enough
+        return [rootNote];
+    }, [currentQuestion, settings.instrument]);
+
     const handleAnswer = useCallback(async (playedUniqueNote: string) => {
+        if (feedbackNote) return;
+
         const playedNoteName = getNoteNameFromUniqueId(playedUniqueNote);
-        if (!playedNoteName) return;
+        const isCorrectNote = correctAnswers.some(answer => {
+            if (settings.instrument === 'Piano') {
+                return answer === playedUniqueNote;
+            }
+            return answer === playedNoteName;
+        });
 
-        if (correctNoteFeedback || incorrectNoteFeedback) return;
+        setFeedbackNote(playedUniqueNote);
+        onUpdatePerformance({ ...currentQuestion, isCorrect: isCorrectNote, drillMode: settings.drillMode });
 
-        const isCorrect = currentQuestion.correctAnswers.includes(playedNoteName);
-        onUpdatePerformance({ ...currentQuestion, isCorrect, drillMode: settings.drillMode });
-        
-        if (isCorrect) {
-            await playNote(playedUniqueNote);
+        if (isCorrectNote) {
+            setIsIncorrect(false);
             playCorrectSound();
-            setCorrectNoteFeedback(playedUniqueNote);
-
+            await playNote(playedUniqueNote);
+            
             setTimeout(() => {
                 stopNote();
-                setCorrectNoteFeedback(null);
+                setFeedbackNote(null);
                 if (currentQuestion.id === questions.length - 1) {
-                    handleFinish(true, t('noteMaster'));
+                    handleFinish(true);
                 } else {
                     goToNextQuestion();
                 }
-            }, 500);
+            }, 1200);
         } else {
+            setIsIncorrect(true);
             playIncorrectSound();
             playVibration(VIBRATION_PATTERNS.INCORRECT);
-            setIncorrectNoteFeedback(playedUniqueNote);
             setTimeout(() => {
-                setIncorrectNoteFeedback(null);
+                setFeedbackNote(null);
+                setIsIncorrect(false);
             }, 500);
         }
-    }, [currentQuestion, onUpdatePerformance, settings.drillMode, questions, handleFinish, goToNextQuestion, playNote, stopNote, t, correctNoteFeedback, incorrectNoteFeedback]);
-
+    }, [correctAnswers, feedbackNote, playNote, stopNote, settings.instrument, settings.drillMode, onUpdatePerformance, currentQuestion, questions.length, handleFinish, goToNextQuestion]);
+    
     const handleAnswerWithSound = useCallback(async (noteId: string) => {
         if (settings.inputMethod === 'Touch') {
             await playNoteSound(noteId, settings.instrument);
@@ -358,11 +374,13 @@ const NoteProfessorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdateP
     useAudioPitch(settings.inputMethod === 'Mic', handleAnswer, settings.audioInputDeviceId, settings.micSensitivity, settings.micGain, settings.micCompressionThreshold, settings.micCompressionRatio);
 
     const renderedInstrument = useMemo(() => {
+        const highlighted = isIncorrect ? [] : correctAnswers;
+        
         const commonProps = {
             onNotePlayed: handleAnswerWithSound,
-            highlightedNotes: currentQuestion.correctAnswers,
-            correctNotes: correctNoteFeedback ? [correctNoteFeedback] : [],
-            incorrectNote: incorrectNoteFeedback,
+            highlightedNotes: highlighted,
+            correctNotes: !isIncorrect && feedbackNote ? [feedbackNote] : [],
+            incorrectNote: isIncorrect ? feedbackNote : null,
             scale: null,
             drillMode: settings.drillMode,
         };
@@ -373,7 +391,7 @@ const NoteProfessorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdateP
                 return <Fretboard {...commonProps} instrument={settings.instrument} handedness={settings.handedness} labelMode="notes" />;
             default: return null;
         }
-    }, [handleAnswerWithSound, correctNoteFeedback, incorrectNoteFeedback, settings, currentQuestion.correctAnswers]);
+    }, [handleAnswerWithSound, correctAnswers, isIncorrect, feedbackNote, settings]);
 
     return (
         <div className="flex flex-col w-full h-full gap-2 sm:gap-4">
@@ -382,8 +400,7 @@ const NoteProfessorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdateP
                     {currentQuestion.id + 1} / {questions.length}
                 </div>
                 <div className="text-center">
-                    <div className={`font-bold text-lg sm:text-xl text-fuchsia-400`}>{settings.bpm > 0 ? settings.bpm : '--'}</div>
-                    <div className="text-xs">BPM</div>
+                    <div className="text-xs">{t(settings.drillMode as TKey)}</div>
                 </div>
                 <div className="flex justify-end">
                     <button onClick={() => { onQuit(); playUIClick(); }} title="Quit" className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"><QuitIcon className="h-5 w-5" /></button>
@@ -395,8 +412,7 @@ const NoteProfessorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdateP
                 </div>
                 <div className="question-panel flex flex-col gap-2 sm:gap-4 lg:w-1/3 lg:max-w-sm lg:order-2">
                     <div className="prompt-container text-center p-2 sm:p-4 rounded-lg border border-transparent bg-black/30 flex-1 flex flex-col justify-center">
-                        <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">{t(settings.drillMode as TKey)}</h3>
-                        <p className="text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center">
+                        <p className="text-lg sm:text-xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center">
                             {currentQuestion.prompt}
                         </p>
                     </div>
@@ -405,6 +421,7 @@ const NoteProfessorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdateP
         </div>
     );
 };
+
 
 /**
  * SimonGame: Handles the 'Simon Memory Game' drill.
@@ -490,7 +507,7 @@ const SimonGame: React.FC<DrillComponentProps> = ({ settings, userData, onUpdate
                 </div>
                 <div className="text-center">
                     <div className="font-bold text-lg sm:text-xl text-fuchsia-400">{settings.bpm}</div>
-                    <div className="text-xs">BPM</div>
+                    <div className="text-xs">{t('bpm')}</div>
                 </div>
                 <div className="flex justify-end">
                     <button onClick={() => { onQuit(); playUIClick(); }} title="Quit" className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"><QuitIcon className="h-5 w-5" /></button>
@@ -801,19 +818,19 @@ const StandardDrill: React.FC<DrillComponentProps> = ({ settings, userData, onQu
         <div className="relative z-10 flex flex-col w-full h-full">
             {currentBpm > 0 && <div className="rhythm-bar" style={{ animationDuration: `${60 / currentBpm}s` }}></div>}
             <div className={`vignette-overlay ${isDanger ? 'vignette-danger' : ''}`} style={{ '--opacity': vignetteOpacity } as React.CSSProperties}></div>
-            {showHelp && scale && <HelpModal scale={scale} onClose={() => setShowHelp(false)} />}
+            {showHelp && scale && <HelpModal scale={scale} onClose={() => setShowHelp(false)} language={settings.language} />}
             
             <header className="grid grid-cols-3 items-center text-stone-300 flex-shrink-0">
                 <div className="flex items-center gap-4">
-                    <div className="font-bold text-base sm:text-lg text-stone-100">Score: {score}</div>
+                    <div className="font-bold text-base sm:text-lg text-stone-100">{t('score')}: {score}</div>
                     <div className={`text-2xl sm:text-3xl font-bold relative ${beats <= 10 ? 'text-red-500 animate-pulse' : 'text-orange-400'}`}>
-                        {beats}<span className="text-sm sm:text-base font-normal text-stone-400 ml-1">Beats</span>
+                        {beats}<span className="text-sm sm:text-base font-normal text-stone-400 ml-1">{t('beats')}</span>
                         {scoreChange && <span key={scoreChange.id} className={`absolute -top-6 right-0 text-xl sm:text-2xl font-bold animate-float-up ${scoreChange.value > 0 ? 'text-green-400' : 'text-red-500'}`}>{scoreChange.value > 0 ? `+${scoreChange.value}` : scoreChange.value}</span>}
                     </div>
                 </div>
                 <div className="text-center">
                     <div className={`font-bold text-lg sm:text-xl text-fuchsia-400 transition-all duration-500 ${bpmIncreasePulse ? 'animate-bpm-pulse' : ''}`}>{currentBpm > 0 ? currentBpm : '--'}</div>
-                    <div className="text-xs">BPM</div>
+                    <div className="text-xs">{t('bpm')}</div>
                 </div>
                 <div className="flex gap-1 sm:gap-2 justify-end">
                     <button onClick={() => { setShowHelp(true); playUIClick(); }} title="Help" className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-full"><HelpIcon className="h-5 w-5" /></button>
@@ -832,7 +849,7 @@ const StandardDrill: React.FC<DrillComponentProps> = ({ settings, userData, onQu
                     <div className={`prompt-container text-center p-2 sm:p-4 rounded-lg border transition-colors duration-300 relative overflow-hidden flex-1 flex flex-col justify-center ${feedbackClass}`}>
                         <h3 className="text-base sm:text-lg font-bold text-stone-300 mb-2 sm:mb-4">{t(settings.drillMode as TKey)}</h3>
                         <p className={`text-xl sm:text-2xl font-semibold text-stone-100 min-h-[40px] flex items-center justify-center transition-all duration-500 ${isPerfectPulse ? 'animate-perfect-pulse' : ''}`}>{activeQuestion.prompt}</p>
-                        {isMultiNoteQuestion && gameState === 'playing' && <div className="text-sm text-stone-300 mt-2">Found {foundNotes.length} of {activeQuestion.correctAnswers.length}</div>}
+                        {isMultiNoteQuestion && gameState === 'playing' && <div className="text-sm text-stone-300 mt-2">{t('found')} {foundNotes.length} {t('of')} {activeQuestion.correctAnswers.length}</div>}
                     </div>
                     {settings.drillMode === 'Scale Detective' && questionPart === 'identify_root' && gameState === 'playing' && (
                         <div className="actions-container grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-3 gap-1 sm:gap-2">
@@ -851,6 +868,7 @@ const StandardDrill: React.FC<DrillComponentProps> = ({ settings, userData, onQu
 const GalaxyConstructorDrill: React.FC<DrillComponentProps> = ({ settings, onUpdatePerformance, handleFinish, currentQuestion, goToNextQuestion, onQuit }) => {
     const scale = useMemo(() => getScale(currentQuestion.key, currentQuestion.scaleType), [currentQuestion]);
     const correctIntervalSequence = useMemo(() => getIntervalSequenceForScale(currentQuestion.scaleType), [currentQuestion.scaleType]);
+    const t = createTranslator(settings.language);
     
     const [builtIntervals, setBuiltIntervals] = useState<string[]>([]);
     
@@ -883,7 +901,7 @@ const GalaxyConstructorDrill: React.FC<DrillComponentProps> = ({ settings, onUpd
                 <div></div> {/* Left placeholder */}
                 <div className="text-center">
                     <div className="font-bold text-lg sm:text-xl text-fuchsia-400">{settings.bpm > 0 ? settings.bpm : '--'}</div>
-                    <div className="text-xs">BPM</div>
+                    <div className="text-xs">{t('bpm')}</div>
                 </div>
                 <div className="flex justify-end">
                     <button onClick={() => { onQuit(); playUIClick(); }} title="Quit" className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"><QuitIcon className="h-5 w-5" /></button>
@@ -892,8 +910,9 @@ const GalaxyConstructorDrill: React.FC<DrillComponentProps> = ({ settings, onUpd
             <GalaxyConstructor 
                 scale={scale} 
                 builtIntervals={builtIntervals} 
-                intervalChoices={intervalChoices} 
+                intervalChoices={intervalChoices.map(name => ({ name, translatedName: t(name as TKey) }))}
                 onSelectInterval={handleIntervalSelection}
+                language={settings.language}
             />
         </div>
     );
@@ -960,11 +979,11 @@ const DegreeDashDrill: React.FC<DrillComponentProps> = ({ settings, onUpdatePerf
     return (
       <div className="flex flex-col w-full h-full">
           <header className="flex justify-between items-center text-stone-300 flex-shrink-0">
-              <div className="font-bold text-lg text-stone-100">{t('round')} {round > 5 ? 'Finale' : `${round}/5`}</div>
+              <div className="font-bold text-lg text-stone-100">{t('round')} {round > 5 ? t('finalChallenge') : `${round}/5`}</div>
               
               <div className="text-center">
                   <div className="font-bold text-lg sm:text-xl text-fuchsia-400">{settings.bpm > 0 ? settings.bpm : '--'}</div>
-                  <div className="text-xs">BPM</div>
+                  <div className="text-xs">{t('bpm')}</div>
               </div>
 
               <div className="flex items-center gap-4">
@@ -1071,7 +1090,7 @@ const Quiz: React.FC<QuizProps> = (props) => {
   }, [settings]);
 
   if (quizPhase === 'loading' || questions.length === 0) {
-    return <div className="text-center p-8">Loading drill...</div>;
+    return <div className="text-center p-8">{t('loading')}</div>;
   }
   
   if (quizPhase === 'info') {
@@ -1083,7 +1102,7 @@ const Quiz: React.FC<QuizProps> = (props) => {
   }
   
   if (quizPhase === 'transition') {
-      return <Countdown message="Get Ready!" onComplete={() => setQuizPhase('active')} />;
+      return <Countdown message={t('ready')} onComplete={() => setQuizPhase('active')} />;
   }
   
   if (quizPhase === 'finished' && completionData) {
@@ -1091,11 +1110,11 @@ const Quiz: React.FC<QuizProps> = (props) => {
       <div className="bg-stone-900/70 backdrop-blur-lg border border-stone-700/50 p-8 rounded-xl text-center shadow-2xl w-full max-w-md">
         <h2 className={`text-3xl font-bold mb-2 ${completionData.success ? 'text-green-400' : 'text-red-500'}`}>{completionData.finalMessage}</h2>
         {completionData.completionMetric && (
-          <div className="text-xl mb-4 text-stone-200">{`Score: `}<span className="text-orange-400 font-bold">{completionData.completionMetric.value}</span> {completionData.completionMetric.label}</div>
+          <div className="text-xl mb-4 text-stone-200">{`${t('score')}: `}<span className="text-orange-400 font-bold">{completionData.completionMetric.value}</span> {completionData.completionMetric.label}</div>
         )}
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <button onClick={handleTryAgain} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg">Try Again</button>
-            <button onClick={onQuit} className="flex-1 bg-stone-600 hover:bg-stone-500 text-white font-bold py-3 px-6 rounded-lg">Main Menu</button>
+            <button onClick={handleTryAgain} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg">{t('tryAgain')}</button>
+            <button onClick={onQuit} className="flex-1 bg-stone-600 hover:bg-stone-500 text-white font-bold py-3 px-6 rounded-lg">{t('mainMenu')}</button>
         </div>
       </div>
     );

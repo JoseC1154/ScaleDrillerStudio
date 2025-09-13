@@ -1,14 +1,16 @@
 import React from 'react';
-import { Scale } from '../types';
-import { DEGREE_NAMES } from '../constants';
+import { Scale, Language } from '../types';
 import { CloseIcon } from './Icons';
+import { createTranslator, TKey } from '../services/translations';
 
 interface HelpModalProps {
   scale: Scale;
   onClose: () => void;
+  language: Language;
 }
 
-const HelpModal: React.FC<HelpModalProps> = ({ scale, onClose }) => {
+const HelpModal: React.FC<HelpModalProps> = ({ scale, onClose, language }) => {
+  const t = createTranslator(language);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
@@ -29,7 +31,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ scale, onClose }) => {
             {scale.notes.map((note, index) => (
                 <div key={note} className="flex justify-between items-center bg-stone-800 p-3 rounded-md">
                 <span className="font-semibold text-lg text-stone-100">{note}</span>
-                <span className="text-stone-400">{DEGREE_NAMES[index + 1]} Degree</span>
+                <span className="text-stone-400">{t(`degree${index + 1}` as TKey)} {t('degreeSuffix')}</span>
                 </div>
             ))}
             </div>
@@ -41,7 +43,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ scale, onClose }) => {
             onClick={onClose}
             className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition"
             >
-            Close
+            {t('guideClose')}
             </button>
         </footer>
       </div>

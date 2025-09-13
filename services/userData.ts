@@ -5,7 +5,7 @@ const USER_DATA_KEY = 'scale-driller-userData';
 export const getInitialUserData = (): UserData => ({
   unlockedLevel: 1,
   isKeySelectionUnlocked: false,
-  unlockedModes: ['Key Conjurer', 'Note Professor'], // Start with Level 1 drills unlocked
+  unlockedModes: ['Note Professor'], // Start with only Note Professor unlocked
   performance: {
     byKey: {},
     byScale: {},

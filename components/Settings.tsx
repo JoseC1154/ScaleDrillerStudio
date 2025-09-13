@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SCALE_TYPES, MUSIC_KEYS, DEGREE_NAMES, LEVEL_MODES, CHORD_TYPES } from '../constants';
+import { SCALE_TYPES, MUSIC_KEYS, LEVEL_MODES, CHORD_TYPES } from '../constants';
 import { DrillSettings, DrillMode, UserData, Note, Language } from '../types';
 import PracticeKeySelector from './PracticeKeySelector';
 import { LockIcon } from './Icons';
@@ -123,7 +123,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSettingChange, o
                         {t('degreesToPractice')}
                         </label>
                         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                        {Object.keys(DEGREE_NAMES).map(d => parseInt(d, 10)).map(degree => (
+                        {Array.from({length: 7}, (_, i) => i + 1).map(degree => (
                             <button
                             key={degree}
                             onClick={() => handlePracticeDegreeToggle(degree)}
@@ -133,7 +133,7 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSettingChange, o
                                 : 'bg-stone-800 hover:bg-stone-700'
                             }`}
                             >
-                            {DEGREE_NAMES[degree]}
+                            {t(`degree${degree}` as TKey)}
                             </button>
                         ))}
                         </div>
